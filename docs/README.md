@@ -17,7 +17,7 @@ You should use `env_utils_windows.h` if you want to use utf16 strings on Windows
 
 ```c
 #include <stdio.h>
-#include "c-env-utils.h"
+#include "env_utils.h"
 
 int main(void) {
     // Read envp that was passed from the parent process.
