@@ -31,7 +31,6 @@ void PrintUTF8(const char* fmt, ...) {
 #endif  // _WIN32
 
 int main(void) {
-    envuInit();
     char *exe_path = envuGetExecutablePath();
     char *exe_dir = envuGetExecutableDir();
     char *cwd = envuGetCwd();

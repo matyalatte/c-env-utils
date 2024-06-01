@@ -85,19 +85,6 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
     return str;
 }
 
-void envuInit() {
-    wchar_t *envp = (wchar_t *)GetEnvironmentStringsW();
-    wchar_t *p = envp;
-    while (*p) {
-        _wputenv(p);
-        while (*p) {
-            p++;
-        }
-        p++;
-    }
-    FreeEnvironmentStringsW((LPWCH)envp);
-}
-
 char *envuGetExecutablePath() {
     wchar_t filename[MAX_PATH + 1];
     filename[MAX_PATH] = 0;

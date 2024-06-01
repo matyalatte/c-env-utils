@@ -38,15 +38,6 @@ static char *AllocStrWithConst(const char *c) {
     return str;
 }
 
-void envuInit() {
-    extern char **environ;
-    char **envp = environ;
-    while (*envp) {
-        putenv(*envp);
-        envp++;
-    }
-}
-
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
 char *envuGetExecutablePath() {
@@ -115,6 +106,7 @@ char *envuGetExecutablePath() {
     GetExecutablePathUnix(path);
     if (*path == '\0')
         return AllocStrWithConst("/");
+    // TODO: path contains "." on NetBSD somehow.
     return AllocStrWithConst(path);
 }
 #endif

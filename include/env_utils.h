@@ -39,13 +39,6 @@ _ENVU_EXTERN const char* envuGetVersion();
 _ENVU_EXTERN int envuGetVersionAsInt();
 
 /**
- * Initializes environment variables with the passed values from the parent process.
- *
- * @note This function should not be called twice in a process.
- */
-_ENVU_EXTERN void envuInit();
-
-/**
  * Frees the memory of a string allocated by c-env-utils.
  *
  * @param p A pointer to a string.

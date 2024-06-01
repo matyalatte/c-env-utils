@@ -20,9 +20,6 @@ You should use `env_utils_windows.h` if you want to use utf16 strings on Windows
 #include "env_utils.h"
 
 int main(void) {
-    // Read envp that was passed from the parent process.
-    envuInit();
-
     // Executable path
     char *exe_path = envuGetExecutablePath();
     printf("Exe: %s\n", exe_path);
