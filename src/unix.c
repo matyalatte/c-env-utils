@@ -80,7 +80,7 @@ char *envuGetExecutablePath() {
 }
 #elif defined(__HAIKU__)
 // Haiku OS requires get_next_image_info to get the executable path.
-char *GetExecutablePath() {
+char *envuGetExecutablePath() {
     int32_t cookie = 0;
     image_info info;
     while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
@@ -91,7 +91,7 @@ char *GetExecutablePath() {
 }
 #else
 // Linux distributons support readlink to get the executable path.
-int TryReadlink(const char *link, char *path, int path_size) {
+static int TryReadlink(const char *link, char *path, int path_size) {
     int new_path_size;
     if (path_size != 0)
         return path_size;
@@ -101,7 +101,7 @@ int TryReadlink(const char *link, char *path, int path_size) {
     return new_path_size;
 }
 
-void GetExecutablePathUnix(char *path) {
+static void GetExecutablePathUnix(char *path) {
     int path_size = 0;
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
