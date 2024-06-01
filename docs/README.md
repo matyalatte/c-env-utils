@@ -10,8 +10,20 @@ Most of the functions are here.
 [c-env-utils: include/env_utils.h File Reference](https://matyalatte.github.io/c-env-utils/env__utils_8h.html)  
 
 c-env-utils only supports utf8 strings.  
-You should use `env_utils_windows.h` if you want to use utf16 strings on Windows.
+You should use `env_utils_windows.h` if you want to use utf16 strings on Windows.  
 [c-env-utils: include/env_utils_windows.h File Reference](https://matyalatte.github.io/c-env-utils/env__utils__windows_8h.html)  
+
+## Platforms
+
+c-env-utils supports most of the desktop operating systems.
+
+- Windows
+- macOS
+- Linux
+- BSD
+- Haiku
+- Solaris
+- Other unix variants (maybe)
 
 ## Example
 
@@ -35,7 +47,7 @@ int main(void) {
     printf("User: %s\n", username);
     envuFree(username);
 
-    // Get an environment variable
+    // An environment variable
     char *paths = envuGetEnv("PATH");
     printf("PATH: %s\n", paths);
     envuFree(paths);

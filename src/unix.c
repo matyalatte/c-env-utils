@@ -215,8 +215,13 @@ static struct passwd *getpwuid_safe(char **buf) {
     if (*buf == NULL)
         return NULL;
 
+#ifdef __sun
+    // Solaris has a little bit different APIs
+    result = getpwuid_r(getuid(), &pwd, *buf, bufsize);
+#else
     int ret = getpwuid_r(getuid(), &pwd, *buf, bufsize, &result);
     if (ret != 0) return NULL;
+#endif
     return result;
 }
 
@@ -260,10 +265,11 @@ char *envuGetUsername() {
     return str;
 }
 
-// Darwin, Linux, FreeBSD, OpenBSD, NetBSD, Haiku, etc.
+// Darwin, Linux, FreeBSD, OpenBSD, NetBSD, Haiku, SunOS, etc.
 char *envuGetOS() {
     struct utsname buf = { 0 };
-    if (uname(&buf) != 0) {
+    // Note: uname(&buf) can be positive on Solaris
+    if (uname(&buf) == -1) {
         return AllocStrWithConst("");
     }
     return AllocStrWithConst(buf.sysname);
