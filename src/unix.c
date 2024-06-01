@@ -38,6 +38,15 @@ static char *AllocStrWithConst(const char *c) {
     return str;
 }
 
+static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
+    size_t str_len1 = strlen(c1);
+    size_t str_len2 = strlen(c2);
+    char *str = AllocStr(str_len1 + str_len2);
+    memcpy(str, c1, str_len1);
+    memcpy(str + str_len1, c2, str_len2);
+    return str;
+}
+
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
 char *envuGetExecutablePath() {
@@ -100,14 +109,52 @@ static void GetExecutablePathUnix(char *path) {
     path[path_size] = 0;
 }
 
+// TODO: path contains "." on NetBSD somehow.
 char *envuGetExecutablePath() {
+    // try readlink
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
     GetExecutablePathUnix(path);
-    if (*path == '\0')
+    if (*path != '\0')
+        return AllocStrWithConst(path);
+
+#ifndef __linux__
+    // readlink() doesn't work on OpenBSD
+    // https://stackoverflow.com/questions/31494901/how-to-get-the-executable-path-on-openbsd
+
+    // try argv[0]
+    char *argv0 = getenv("_");
+    if (*argv0 == "\0")  // failed to get argv[0]
         return AllocStrWithConst("/");
-    // TODO: path contains "." on NetBSD somehow.
-    return AllocStrWithConst(path);
+    else if (*argv0 == "/")  // argv[0] is an absolute path
+        return AllocStrWithConst(argv0);
+
+    // use pwd if exists
+    char *pwd = getenv("PWD");
+    if (*pwd == "\0")
+        return envuGetFullPath(argv0);
+
+    // concatnate pwd and argv[0]
+    size_t pwd_size = strlen(pwd);
+    char *concat;
+    if (pwd[pwd_size - 1] == "/") {
+        concat = AllocStrWithTwoConsts(pwd, argv0);
+    } else {
+        char *pwd2 = AllocStrWithTwoConsts(pwd, "/");
+        concat = AllocStrWithTwoConsts(pwd2, argv0);
+        envuFree(pwd2);
+    }
+    char *ret = envuGetFullPath(concat);
+    envuFree(concat);
+    if (envuFileExists(ret))  // exe path found
+        return ret;
+
+    // TODO: check the PATH variable?
+
+    envuFree(ret);
+#endif
+    // Failed to get exe path
+    return AllocStrWithConst("/");
 }
 #endif
 
@@ -201,6 +248,8 @@ char *envuGetUsername() {
         name = p->pw_name;
     if (name == NULL)  // try to get from env
         name = getenv("USER");
+    if (name == NULL)  // try to get from env
+        name = getenv("LOGNAME");
     if (name == NULL) {
         // failed to get username
         free(buf);
@@ -211,6 +260,7 @@ char *envuGetUsername() {
     return str;
 }
 
+// Darwin, Linux, FreeBSD, OpenBSD, NetBSD, Haiku, etc.
 char *envuGetOS() {
     struct utsname buf = { 0 };
     if (uname(&buf) != 0) {
