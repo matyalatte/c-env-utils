@@ -18,7 +18,7 @@ TEST(UtilTest, envuGetOS) {
     char* os = envuGetOS();
     std::string os_lower(os);
     std::transform(os_lower.begin(), os_lower.end(), os_lower.begin(),
-                   [](unsigned char c){ return std::tolower(c); });
+                   [](unsigned char c){ return (unsigned char)std::tolower(c); });
     envuFree(os);
     ASSERT_STREQ(TRUE_OS, os_lower.c_str());
 }

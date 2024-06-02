@@ -43,6 +43,11 @@ elif envu_OS == 'haiku'
     envu_link_args += ['-lbe']
 endif
 
+if envu_compiler != 'msvc'
+    # Some platforms seem to use '-Wstrict-prototypes' as default
+    envu_c_args += ['-Wno-strict-prototypes']
+endif
+
 # set source files
 envu_sources = ['src/common.c']
 if envu_OS == 'windows'
