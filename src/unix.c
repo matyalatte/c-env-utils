@@ -125,20 +125,20 @@ char *envuGetExecutablePath() {
 
     // try argv[0]
     char *argv0 = getenv("_");
-    if (*argv0 == "\0")  // failed to get argv[0]
+    if (*argv0 == '\0')  // failed to get argv[0]
         return AllocStrWithConst("/");
-    else if (*argv0 == "/")  // argv[0] is an absolute path
+    else if (*argv0 == '/')  // argv[0] is an absolute path
         return AllocStrWithConst(argv0);
 
     // use pwd if exists
     char *pwd = getenv("PWD");
-    if (*pwd == "\0")
+    if (*pwd == '\0')
         return envuGetFullPath(argv0);
 
     // concatnate pwd and argv[0]
     size_t pwd_size = strlen(pwd);
     char *concat;
-    if (pwd[pwd_size - 1] == "/") {
+    if (pwd[pwd_size - 1] == '/') {
         concat = AllocStrWithTwoConsts(pwd, argv0);
     } else {
         char *pwd2 = AllocStrWithTwoConsts(pwd, "/");
@@ -164,11 +164,80 @@ int envuFileExists(const char *path) {
     return (stat(path, &buffer) == 0);
 }
 
+// TODO: Clean this dirty code up
 char *envuGetFullPath(const char *path) {
-    return realpath(path, NULL);
+    if (path == NULL)
+        return NULL;
+
+    char *abs_path;
+    if (path[0] == '/') {
+        abs_path = AllocStrWithConst(path);
+    } else {
+        // append working directory
+        char *cwd = envuGetCwd();
+        char *cwd2 = AllocStrWithTwoConsts(cwd, "/");
+        abs_path = AllocStrWithTwoConsts(cwd2, path);
+        envuFree(cwd);
+        envuFree(cwd2);
+    }
+
+    char *resolved = AllocStr(strlen(abs_path));
+
+    char *abs_p = abs_path;
+    char *res_p = resolved;
+    int dot_count = 0;
+    int is_not_dot = 0;
+    while (*abs_p != 0) {
+        if (*abs_p == '/') {
+            if (dot_count > 0 && dot_count <= 2 && is_not_dot == 0) {
+                // back to a previous slash when "." or ".." found
+                while (dot_count > 0 && res_p != resolved) {
+                    res_p--;
+                    while (*res_p != '/' && res_p != resolved) {
+                        res_p--;
+                    }
+                    dot_count--;
+                }
+            }
+            dot_count = 0;
+            is_not_dot = 0;
+        } else if (*abs_p == '.') {
+            dot_count++;
+        } else {
+            dot_count = 0;
+            is_not_dot = 1;
+        }
+        *res_p = *abs_p;
+        res_p++;
+        abs_p++;
+    }
+    if (dot_count > 0 && dot_count <= 2 && is_not_dot == 0) {
+        // back to a previous slash when "." or ".." found
+        while (dot_count > 0 && res_p != resolved) {
+            res_p--;
+            while (*res_p != '/' && res_p != resolved) {
+                res_p--;
+            }
+            dot_count--;
+        }
+        res_p++;
+    }
+    *res_p = 0;
+    if (res_p > resolved + 1) {
+        // remove the last slash
+        res_p--;
+        if (*res_p == '/')
+            *res_p = '\0';
+    }
+    char *ret = AllocStrWithConst(resolved);
+    envuFree(abs_path);
+    envuFree(resolved);
+    return ret;
 }
 
 char *envuGetDirectory(const char *path) {
+    if (path == NULL)
+        return NULL;
     // dirname() may modify the contents of path. So, we use copied one.
     char *copied_path = AllocStrWithConst(path);
     char *dir = dirname(copied_path);

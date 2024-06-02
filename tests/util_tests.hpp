@@ -1,10 +1,10 @@
 #pragma once
 #include <gtest/gtest.h>
-#include "env_utils.h"
-#include "true_env_info.h"
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include "env_utils.h"
+#include "true_env_info.h"
 
 TEST(UtilTest, envuGetVersion) {
     ASSERT_STREQ(ENVU_VERSION, envuGetVersion());
@@ -23,6 +23,8 @@ TEST(UtilTest, envuGetOS) {
     ASSERT_STREQ(TRUE_OS, os_lower.c_str());
 }
 
+// TODO: test with long paths
+// TODO: test with unicode strings
 TEST(UtilTest, envuGetExecutablePath) {
     char* exe_path = envuGetExecutablePath();
     ASSERT_STREQ(TRUE_EXE_PATH, exe_path);

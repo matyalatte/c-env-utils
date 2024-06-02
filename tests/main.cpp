@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <gtest/gtest.h>
 #include "util_tests.hpp"
+#include "path_tests.hpp"
 #include "true_env_info.h"
 
 int main(int argc, char* argv[]) {

@@ -100,17 +100,41 @@ int envuFileExists(const char *path) {
 }
 
 char *envuGetFullPath(const char *path) {
+    if (path == NULL)
+        return NULL;
+    if (path[0] == '\0')
+        return envuGetCwd();
+
     wchar_t *wpath = envuUTF8toUTF16(path);
     wchar_t fullpath[MAX_PATH + 1];
     fullpath[MAX_PATH] = 0;
-    GetFullPathNameW(wpath, MAX_PATH, fullpath, NULL);
+    int size = GetFullPathNameW(wpath, MAX_PATH, fullpath, NULL);
+    if (size < 2)  // failed to get full path.
+        return NULL;
+
+    // remove the last slash
+    if (fullpath[size - 1] == L'\\' && fullpath[size - 2] != L':')
+        fullpath[size - 1] = L'\0';
+
     envuFree(wpath);
     return envuUTF16toUTF8(fullpath);
 }
 
+static int isAbsPath(const char *path) {
+    if (path[0] == '/' || path[0] == '\\')
+        return 1;
+    while (path[0] != '\0' && path[0] != '/' && path[0] != '\\') {
+        if (path[0] == ':' && (path[1] == '/' || path[1] == '\\'))
+            return 1;
+        path++;
+    }
+    return 0;
+}
+
 char *envuGetDirectory(const char *path) {
     // TODO: should we support the "\?" prefix?
-    // TODO: compare with dirname() for unix
+    if (path == NULL)
+        return NULL;
     if (*path == '\0')
         return AllocStrWithConst(".");
 
@@ -136,6 +160,10 @@ char *envuGetDirectory(const char *path) {
         // the last character is a slash
         if (slash_p[1] == NULL) {
             // only the last character is a slash
+            if (isAbsPath(path)) {
+                // drive root. ("/" or "*:/")
+                return copied_path;
+            }
             envuFree(copied_path);
             return AllocStrWithConst(".");
         }
