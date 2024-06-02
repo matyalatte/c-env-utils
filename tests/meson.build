@@ -14,6 +14,10 @@ test_conf.set('BUILD_DIR', true_build_dir)
 test_conf.set('SOURCE_ROOT', true_source_root)
 test_conf.set('EXE_NAME', true_exe_name)
 test_conf.set('OS', envu_OS)
+if envu_OS == 'windows'
+    drive_name = true_source_root.split(':')[0]
+    test_conf.set('WIN_DRIVE', drive_name)
+endif
 configure_file(input : 'true_env_info.h.in',
                output : 'true_env_info.h',
                configuration : test_conf)

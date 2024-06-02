@@ -12,27 +12,28 @@
 TEST(PathTest, envuGetFullPathAbsolute) {
     std::vector<std::pair<const char*, const char*>> cases = {
 #ifdef _WIN32
-        { "C:\\usr\\lib", "C:\\usr\\lib" },
-        { "C:\\usr\\lib\\", "C:\\usr\\lib" },
-        { "C:\\usr\\lib\\.", "C:\\usr\\lib" },
-        { "C:\\usr\\lib\\..", "C:\\usr" },
-        { "C:\\usr\\.\\lib", "C:\\usr\\lib" },
-        { "C:\\usr\\..\\lib/", "C:\\lib" },
-        { "C:\\.", "C:\\" },
-        { "C:\\..", "C:\\" },
-        { "/usr/lib", "C:\\usr\\lib" },
-        { "/usr/lib/", "C:\\usr\\lib" },
-        { "/usr/lib/.", "C:\\usr\\lib" },
-        { "/usr/lib/..", "C:\\usr" },
-        { "/usr/./lib", "C:\\usr\\lib" },
-        { "/usr/../lib/", "C:\\lib" },
-        { "/.", "C:\\" },
-        { "/..", "C:\\" },
-        { "/./", "C:\\" },
-        { "/../", "C:\\" },
-        { "/", "C:\\" },
+        // Note: WIN_DRIVE ":\\" == "C:\\" on C drive.
+        { WIN_DRIVE ":\\usr\\lib", WIN_DRIVE ":\\usr\\lib" },
+        { WIN_DRIVE ":\\usr\\lib\\", WIN_DRIVE ":\\usr\\lib" },
+        { WIN_DRIVE ":\\usr\\lib\\.", WIN_DRIVE ":\\usr\\lib" },
+        { WIN_DRIVE ":\\usr\\lib\\..", WIN_DRIVE ":\\usr" },
+        { WIN_DRIVE ":\\usr\\.\\lib", WIN_DRIVE ":\\usr\\lib" },
+        { WIN_DRIVE ":\\usr\\..\\lib/", WIN_DRIVE ":\\lib" },
+        { WIN_DRIVE ":\\.", WIN_DRIVE ":\\" },
+        { WIN_DRIVE ":\\..", WIN_DRIVE ":\\" },
+        { "/usr/lib", WIN_DRIVE ":\\usr\\lib" },
+        { "/usr/lib/", WIN_DRIVE ":\\usr\\lib" },
+        { "/usr/lib/.", WIN_DRIVE ":\\usr\\lib" },
+        { "/usr/lib/..", WIN_DRIVE ":\\usr" },
+        { "/usr/./lib", WIN_DRIVE ":\\usr\\lib" },
+        { "/usr/../lib/", WIN_DRIVE ":\\lib" },
+        { "/.", WIN_DRIVE ":\\" },
+        { "/..", WIN_DRIVE ":\\" },
+        { "/./", WIN_DRIVE ":\\" },
+        { "/../", WIN_DRIVE ":\\" },
+        { "/", WIN_DRIVE ":\\" },
         // Windows reads a sequence of dots as "."
-        { "/usr/lib/....", "C:\\usr\\lib" },
+        { "/usr/lib/....", WIN_DRIVE ":\\usr\\lib" },
 #else
         { "/usr/lib", "/usr/lib" },
         { "/usr/lib/", "/usr/lib" },
@@ -83,9 +84,9 @@ TEST(PathTest, envuGetFullPathRelative) {
 TEST(PathTest, envuGetDirectory) {
     std::vector<std::pair<const char*, const char*>> cases = {
 #ifdef _WIN32
-        { "C:\\usr\\lib", "C:\\usr" },
-        { "C:\\usr\\", "C:\\" },
-        { "C:\\", "C:\\" },
+        { WIN_DRIVE ":\\usr\\lib", WIN_DRIVE ":\\usr" },
+        { WIN_DRIVE ":\\usr\\", WIN_DRIVE ":\\" },
+        { WIN_DRIVE ":\\", WIN_DRIVE ":\\" },
 #endif
         { "/usr/lib", "/usr" },
         { "/usr/", "/" },
