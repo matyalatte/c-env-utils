@@ -1,0 +1,5 @@
+#pragma once
+const char *TRUE_BUILD_DIR = "@BUILD_DIR@";
+const char *TRUE_EXE_PATH = "@BUILD_DIR@\\\\@EXE_NAME@";
+const char *TRUE_CWD = "@SOURCE_ROOT@";
+const char *TRUE_OS = "@OS@";

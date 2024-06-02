@@ -117,27 +117,38 @@ char *envuGetDirectory(const char *path) {
     char *copied_path = AllocStrWithConst(path);
 
     char *p = copied_path;
-    char *last_slash_p = NULL;
-    char *second_slash_p = NULL;
+    char *slash_p[3] = { NULL, NULL, NULL };
     while (*p != '\0') {
         if (*p == '\\' || *p == '/') {
-            second_slash_p = last_slash_p;
-            last_slash_p = p;
+            // store the last three slashes.
+            slash_p[2] = slash_p[1];
+            slash_p[1] = slash_p[0];
+            slash_p[0] = p;
         }
         p++;
     }
-    if (last_slash_p == NULL) {
+    if (slash_p[0] == NULL) {
+        // slash not found
         envuFree(copied_path);
         return AllocStrWithConst(".");
     }
-    if (last_slash_p + 1 == p) {
-        if (second_slash_p == NULL) {
+    if (slash_p[0] + 1 == p) {
+        // the last character is a slash
+        if (slash_p[1] == NULL) {
+            // only the last character is a slash
             envuFree(copied_path);
             return AllocStrWithConst(".");
         }
-        last_slash_p = second_slash_p;
+        slash_p[0] = slash_p[1];
+        slash_p[1] = slash_p[2];
     }
-    last_slash_p[1] = '\0';
+    if (slash_p[1] == NULL) {
+        // keep the last slash because there is no other slashes.
+        slash_p[0][1] = '\0';
+    } else {
+        // overwrite the last slash with null
+        slash_p[0][0] = '\0';
+    }
     char *str = AllocStrWithConst(copied_path);
     envuFree(copied_path);
     return str;

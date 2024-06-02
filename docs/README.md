@@ -66,6 +66,7 @@ int main(void) {
 ```bash
 meson setup build
 meson compile -C build
+meson test -C build
 ```
 
 ### Build Library Only
