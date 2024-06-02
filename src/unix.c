@@ -106,6 +106,7 @@ static void GetExecutablePathUnix(char *path) {
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
     path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+    path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
     path[path_size] = 0;
 }
 

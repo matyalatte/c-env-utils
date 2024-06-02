@@ -1,5 +1,9 @@
 #pragma once
 const char *TRUE_BUILD_DIR = "@BUILD_DIR@";
+#ifdef _WIN32
 const char *TRUE_EXE_PATH = "@BUILD_DIR@\\\\@EXE_NAME@";
+#else
+const char *TRUE_EXE_PATH = "@BUILD_DIR@/@EXE_NAME@";
+#endif
 const char *TRUE_CWD = "@SOURCE_ROOT@";
 const char *TRUE_OS = "@OS@";
