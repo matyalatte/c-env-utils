@@ -56,9 +56,21 @@ else
     envu_sources += ['src/unix.c']
 endif
 
+# set winapi libraries
+win_lib_deps = []
+if envu_OS == 'windows'
+    foreach lib : ['kernel32', 'advapi32']
+        win_lib_deps += [
+            meson.get_compiler('c').find_library(lib,
+                required: true),
+        ]
+    endforeach
+endif
+
 # main binary
 env_utils = library('env_utils',
     envu_sources,
+    dependencies: win_lib_deps,
     c_args: envu_c_args,
     cpp_args: envu_c_args,
     link_args: envu_link_args,
