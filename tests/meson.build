@@ -17,6 +17,8 @@ test_conf.set('OS', envu_OS)
 if envu_OS == 'windows'
     drive_name = true_source_root.split(':')[0]
     test_conf.set('WIN_DRIVE', drive_name)
+else
+    test_conf.set('WIN_DRIVE', '')
 endif
 configure_file(input : 'true_env_info.h.in',
                output : 'true_env_info.h',

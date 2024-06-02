@@ -20,7 +20,7 @@ envu_compiler = meson.get_compiler('c').get_id()
 envu_is_release = get_option('buildtype').startswith('release') or (get_option('buildtype').startswith('custom') and not get_option('debug'))
 
 # set compiler and linker options
-if envu_OS == 'darwin'
+if envu_OS == 'darwin' and not meson.is_subproject()
     languages = ['c']
     macosx_version_min = '-mmacosx-version-min=' + get_option('macosx_version_min')
     add_global_arguments(macosx_version_min, language: languages)
