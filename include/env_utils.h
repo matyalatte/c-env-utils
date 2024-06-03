@@ -153,6 +153,35 @@ _ENVU_EXTERN char *envuGetUsername();
  */
 _ENVU_EXTERN char *envuGetOS();
 
+/**
+ * Gets the environment paths from the PATH variable.
+ *
+ * @note Arrays that are returned from this method should be freed with envuFreeEnvPaths().
+ *
+ * @param path_count The number of paths will be stored here if it's not a null pointer.
+ * @returns A null-terminated array of strings.
+ */
+_ENVU_EXTERN char **envuGetEnvPaths(int *path_count);
+
+/**
+ * Parses the PATH variable.
+ * Its paths should be separated by semicolons on Windows, or by colons on other platforms.
+ *
+ * @note Arrays that are returned from this method should be freed with envuFreeEnvPaths().
+ *
+ * @param env_path The value of the PATH variable.
+ * @param path_count The number of paths will be stored here if it's not a null pointer.
+ * @returns A null-terminated array of strings.
+ */
+_ENVU_EXTERN char **envuParseEnvPaths(const char *env_path, int *path_count);
+
+/**
+ * Frees the memory of an array allocated by envuGetEnvPaths() or envuParseEnvPaths().
+ *
+ * @param paths A null-terminated array of strings.
+ */
+_ENVU_EXTERN void envuFreeEnvPaths(char **paths);
+
 #ifdef __cplusplus
 }
 #endif

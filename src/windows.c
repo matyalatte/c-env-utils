@@ -6,6 +6,7 @@
 
 #include "env_utils.h"
 #include "env_utils_windows.h"
+#include "env_utils_priv.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH  260
@@ -44,15 +45,13 @@ wchar_t *envuUTF8toUTF16(const char* str) {
     return wstr;
 }
 
-static char *AllocStr(size_t size) {
+char *AllocStr(size_t size) {
     char *str;
     str = (char *)calloc(size + 1, sizeof(char));
     return str;
 }
 
-#define AllocEmptyStr() AllocStr(0)
-
-static char *AllocStrWithConst(const char *c) {
+char *AllocStrWithConst(const char *c) {
     size_t str_len = strlen(c);
     char *str = AllocStr(str_len);
     memcpy_s(str, str_len, c, str_len);
@@ -267,4 +266,8 @@ char *envuGetUsername() {
 
 char *envuGetOS() {
     return AllocStrWithConst("Windows");
+}
+
+char **envuParseEnvPaths(const char *env_path, int *path_count) {
+    return ParseEnvPathsBase(env_path, path_count, ';');
 }

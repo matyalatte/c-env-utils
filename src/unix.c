@@ -18,20 +18,19 @@
 #include <string.h>
 
 #include "env_utils.h"
+#include "env_utils_priv.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX  512
 #endif
 
-static char *AllocStr(size_t size) {
+char *AllocStr(size_t size) {
     char *str;
     str = (char *)calloc(size + 1, sizeof(char));
     return str;
 }
 
-#define AllocEmptyStr() AllocStr(0)
-
-static char *AllocStrWithConst(const char *c) {
+char *AllocStrWithConst(const char *c) {
     size_t str_len = strlen(c);
     char *str = AllocStr(str_len);
     memcpy(str, c, str_len);
@@ -78,6 +77,87 @@ char *envuGetExecutablePath() {
         return AllocStrWithConst("/");
     return AllocStrWithConst(path);
 }
+#elif defined(__OpenBSD__)
+// OpenBSD has no api to get executable path.
+// So, we need to guess it from argv[0]
+static char *getArgv0() {
+    char **argv;
+    size_t len;
+    int mib[4] = { CTL_KERN, KERN_PROC_ARGC, getpid(), KERN_PROC_ARGV };
+    if (sysctl(mib, 4, NULL, &len, NULL, 0) < 0)
+        return NULL;
+    argv = malloc(len);
+    if (argv == NULL)
+        return NULL;
+    if (sysctl(mib, 4, argv, &len, NULL, 0) < 0) {
+        free(argv);
+        return NULL;
+    }
+    char *argv0 = AllocStrWithConst(argv[0]);
+    free(argv);
+    return argv0;
+}
+
+char *envuGetExecutablePath() {
+    // try readlink
+    char path[PATH_MAX + 1];
+    path[PATH_MAX] = 0;
+
+    // try to get argv[0]
+    char *argv0 = getArgv0();
+    if (argv0 == NULL)  // failed to get argv[0]
+        return AllocStrWithConst("/");
+
+    // Assume argv[0] as an absolute path or a related path
+    char *fullpath = envuGetFullPath(argv0);
+    if (*argv0 == '/' || envuFileExists(fullpath)) {
+        envuFree(argv0);
+        return fullpath;
+    }
+    envuFree(fullpath);
+
+    // Assume that argv[0] exists in one of environment paths
+    fullpath = NULL;
+    int count = 0;
+    char **paths = envuGetEnvPaths(&count);
+    if (paths == NULL) {
+        envuFree(argv0);
+        return AllocStrWithConst("/");
+    }
+
+    for (char **p = paths; p < paths + count; p++) {
+        int len = strlen(*p);
+
+        // concat an environment path with argv[0]
+        char *abs_path;
+        char *abs_path_full;
+        if ((*p)[len - 1] == '/') {
+            abs_path = AllocStrWithTwoConsts(*p, argv0);
+        } else {
+            char *path2 = AllocStrWithTwoConsts(*p, "/");
+            abs_path = AllocStrWithTwoConsts(path2, argv0);
+            envuFree(path2);
+        }
+        abs_path_full = envuGetFullPath(abs_path);
+        envuFree(abs_path);
+
+        if (envuFileExists(abs_path_full)) {
+            // found the executable path
+            fullpath = abs_path_full;
+            break;
+        }
+        envuFree(abs_path_full);
+    }
+
+    envuFreeEnvPaths(paths);
+    envuFree(argv0);
+
+    if (fullpath != NULL)
+        return fullpath;
+
+    // Failed to get exe path
+    return AllocStrWithConst("/");
+}
 #elif defined(__HAIKU__)
 // Haiku OS requires get_next_image_info to get the executable path.
 char *envuGetExecutablePath() {
@@ -110,7 +190,6 @@ static void GetExecutablePathUnix(char *path) {
     path[path_size] = 0;
 }
 
-// TODO: path contains "." on NetBSD somehow.
 char *envuGetExecutablePath() {
     // try readlink
     char path[PATH_MAX + 1];
@@ -119,41 +198,6 @@ char *envuGetExecutablePath() {
     if (*path != '\0')
         return AllocStrWithConst(path);
 
-#ifndef __linux__
-    // readlink() doesn't work on OpenBSD
-    // https://stackoverflow.com/questions/31494901/how-to-get-the-executable-path-on-openbsd
-
-    // try argv[0]
-    char *argv0 = getenv("_");
-    if (*argv0 == '\0')  // failed to get argv[0]
-        return AllocStrWithConst("/");
-    else if (*argv0 == '/')  // argv[0] is an absolute path
-        return AllocStrWithConst(argv0);
-
-    // use pwd if exists
-    char *pwd = getenv("PWD");
-    if (*pwd == '\0')
-        return envuGetFullPath(argv0);
-
-    // concatnate pwd and argv[0]
-    size_t pwd_size = strlen(pwd);
-    char *concat;
-    if (pwd[pwd_size - 1] == '/') {
-        concat = AllocStrWithTwoConsts(pwd, argv0);
-    } else {
-        char *pwd2 = AllocStrWithTwoConsts(pwd, "/");
-        concat = AllocStrWithTwoConsts(pwd2, argv0);
-        envuFree(pwd2);
-    }
-    char *ret = envuGetFullPath(concat);
-    envuFree(concat);
-    if (envuFileExists(ret))  // exe path found
-        return ret;
-
-    // TODO: check the PATH variable?
-
-    envuFree(ret);
-#endif
     // Failed to get exe path
     return AllocStrWithConst("/");
 }
@@ -343,4 +387,8 @@ char *envuGetOS() {
         return AllocStrWithConst("");
     }
     return AllocStrWithConst(buf.sysname);
+}
+
+char **envuParseEnvPaths(const char *env_path, int *path_count) {
+    return ParseEnvPathsBase(env_path, path_count, ':');
 }

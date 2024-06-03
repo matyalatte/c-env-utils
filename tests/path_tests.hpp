@@ -104,3 +104,49 @@ TEST(PathTest, envuGetDirectory) {
         envuFree(dir);
     }
 }
+
+TEST(PathTest, envuParseEnvPaths) {
+    std::vector<std::pair<const char*, std::vector<const char*>>> cases = {
+        { "", {} },
+        { "path", { "path" } },
+#ifdef _WIN32
+        { ";", {} },
+        { "path;", { "path" } },
+        { "path;;", { "path" } },
+        { "path;path2", { "path", "path2" } },
+        { "path;path2;", { "path", "path2" } },
+        { "path;;path2", { "path", "path2" } },
+        { "path;path2;path3", { "path", "path2", "path3" } },
+        { "C:\\Program Files", { "C:\\Program Files" } },
+        { "C:\\Program Files;C:\\Users\\me", { "C:\\Program Files", "C:\\Users\\me" } },
+#else
+        { ":", {} },
+        { "path:", { "path" } },
+        { "path::", { "path" } },
+        { "path:path2", { "path", "path2" } },
+        { "path:path2:", { "path", "path2" } },
+        { "path:path2", { "path", "path2" } },
+        { "path:path2:path3", { "path", "path2", "path3" } },
+        { "/Program Files", { "/Program Files" } },
+        { "/Program Files:/Users/me", { "/Program Files", "/Users/me" }
+#endif
+    };
+    for (auto c : cases) {
+        int count;
+        char** paths = envuParseEnvPaths(c.first, &count);
+        if (c.first == NULL) {
+            EXPECT_EQ(NULL, paths);
+            continue;
+        }
+        EXPECT_EQ(c.second.size(), count);
+        for (int i = 0; i < count; i++) {
+            EXPECT_STREQ(c.second[i], paths[i]);
+        }
+        envuFreeEnvPaths(paths);
+    }
+}
+
+TEST(PathTest, envuParseEnvPathsNull) {
+    char** paths = envuParseEnvPaths(NULL, NULL);
+    EXPECT_EQ(NULL, paths);
+}
