@@ -128,7 +128,7 @@ TEST(PathTest, envuParseEnvPaths) {
         { "path:path2", { "path", "path2" } },
         { "path:path2:path3", { "path", "path2", "path3" } },
         { "/Program Files", { "/Program Files" } },
-        { "/Program Files:/Users/me", { "/Program Files", "/Users/me" }
+        { "/Program Files:/Users/me", { "/Program Files", "/Users/me" } },
 #endif
     };
     for (auto c : cases) {

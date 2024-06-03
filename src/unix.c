@@ -2,11 +2,13 @@
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+// for GetExecutablePath()
 #include <sys/param.h>
-#include <sys/sysctl.h>  // for GetExecutablePathFreeBSD()
+#include <sys/sysctl.h>
 #elif defined(__HAIKU__)
-#include <kernel/image.h>  // for GetExecutablePathHaiku()
+// for GetExecutablePath()
+#include <kernel/image.h>
 #endif
 
 #include <sys/stat.h>
@@ -83,7 +85,7 @@ char *envuGetExecutablePath() {
 static char *getArgv0() {
     char **argv;
     size_t len;
-    int mib[4] = { CTL_KERN, KERN_PROC_ARGC, getpid(), KERN_PROC_ARGV };
+    int mib[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
     if (sysctl(mib, 4, NULL, &len, NULL, 0) < 0)
         return NULL;
     argv = malloc(len);
