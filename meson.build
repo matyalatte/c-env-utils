@@ -11,7 +11,8 @@ project('c-env-utils', ['c'],
         'cpp_std=c++11',                # strict C++11
         'cpp_eh=sc',                    # shut the compiler up in some cases
         'cpp_winlibs=',                 # likewise as with c_winlibs
-    ],)
+    ],
+    version: '0.2.0')
 
 envu_link_args = []
 envu_c_args = []
