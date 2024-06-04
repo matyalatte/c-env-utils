@@ -192,7 +192,6 @@ static int TryReadlink(const char *link, char *path, int path_size) {
 static void GetExecutablePathUnix(char *path) {
     int path_size = 0;
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
-    // TODO: path can contain "." on NetBSD somehow.
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
     path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
     path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
@@ -204,9 +203,15 @@ char *envuGetExecutablePath() {
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
     GetExecutablePathUnix(path);
-    if (*path != '\0')
+    if (*path != '\0') {
+#ifdef __NetBSD__
+        // procfs does not remove dot segments from paths on NetBSD.
+        // So, we need to remove them by ourselves.
+        return envuGetFullPath(path);
+#else
         return AllocStrWithConst(path);
-
+#endif
+    }
     // Failed to get exe path
     return NULL;
 }
