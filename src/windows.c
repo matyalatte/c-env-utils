@@ -29,6 +29,8 @@ static wchar_t *AllocWstr(size_t size) {
 #define AllocEmptyWstr() AllocWstr(0)
 
 wchar_t *envuUTF8toUTF16(const char* str) {
+    if (str == NULL)
+        return NULL;
     if (*str == '\0')
         return AllocEmptyWstr();
 
@@ -52,8 +54,12 @@ char *AllocStr(size_t size) {
 }
 
 char *AllocStrWithConst(const char *c) {
+    if (c == NULL)
+        return NULL;
     size_t str_len = strlen(c);
     char *str = AllocStr(str_len);
+    if (str == NULL)
+        return NULL;
     memcpy_s(str, str_len, c, str_len);
     return str;
 }
@@ -62,12 +68,16 @@ static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
     size_t str_len1 = strlen(c1);
     size_t str_len2 = strlen(c2);
     char *str = AllocStr(str_len1 + str_len2);
+    if (str == NULL)
+        return NULL;
     memcpy_s(str, str_len1, c1, str_len1);
     memcpy_s(str + str_len1, str_len2, c2, str_len2);
     return str;
 }
 
 char *envuUTF16toUTF8(const wchar_t* wstr) {
+    if (wstr == NULL)
+        return NULL;
     if (*wstr == L'\0')
         return AllocEmptyStr();
 
@@ -87,15 +97,17 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
 char *envuGetExecutablePath() {
     wchar_t filename[MAX_PATH + 1];
     filename[MAX_PATH] = 0;
-    GetModuleFileNameW(NULL, filename, MAX_PATH);
+    int ret = GetModuleFileNameW(NULL, filename, MAX_PATH);
+    if (ret == 0)
+        return NULL;
     return envuUTF16toUTF8(filename);
 }
 
 int envuFileExists(const char *path) {
     wchar_t *wpath = envuUTF8toUTF16(path);
-    int ret = GetFileAttributesW(wpath) != INVALID_FILE_ATTRIBUTES;
+    DWORD ret = GetFileAttributesW(wpath);
     envuFree(wpath);
-    return ret;
+    return (ret != INVALID_FILE_ATTRIBUTES) && ((ret & FILE_ATTRIBUTE_DIRECTORY) == 0);
 }
 
 char *envuGetFullPath(const char *path) {
@@ -184,59 +196,71 @@ char *envuGetDirectory(const char *path) {
 char *envuGetCwd() {
     wchar_t cwd[MAX_PATH + 1];
     cwd[MAX_PATH] = 0;
-    _wgetcwd(cwd, MAX_PATH);
-    return envuUTF16toUTF8(cwd);
+    wchar_t *ret = _wgetcwd(cwd, MAX_PATH);
+    return envuUTF16toUTF8(ret);
 }
 
-void envuSetCwd(const char *path) {
+int envuSetCwd(const char *path) {
+    if (path == NULL)
+        return -1;
     wchar_t *wpath = envuUTF8toUTF16(path);
-    _wchdir(wpath);
+    int ret = _wchdir(wpath);
     envuFree(wpath);
+    return -(ret != 0);
 }
 
 char *envuGetEnv(const char *name) {
+    if (name == NULL)
+        return NULL;
     wchar_t *wname = envuUTF8toUTF16(name);
     size_t size;
-    if (_wgetenv_s(&size, NULL, 0, wname)) {
+    if (_wgetenv_s(&size, NULL, 0, wname) || size == 0) {
         envuFree(wname);
-        return AllocStrWithConst("");
+        return NULL;
     }
-    wchar_t* wstr = AllocWstr(size + 1);
+    wchar_t* wstr = AllocWstr(size);
     int ret = _wgetenv_s(&size, wstr, size, wname);
     envuFree(wname);
     if (ret) {
         envuFree(wstr);
-        return AllocStrWithConst("");
+        return NULL;
     }
     char *str = envuUTF16toUTF8(wstr);
     envuFree(wstr);
     return str;
 }
 
-void envuSetEnv(const char *name, const char *value) {
+int envuSetEnv(const char *name, const char *value) {
+    if (name == NULL)
+        return -1;
     wchar_t *wname = envuUTF8toUTF16(name);
     wchar_t *wvalue = envuUTF8toUTF16(value);
-    _wputenv_s(wname, wvalue);
+    errno_t ret;
+    if (wvalue == NULL)
+        ret = _wputenv_s(wname, L"");
+    else
+        ret = _wputenv_s(wname, wvalue);
     envuFree(wname);
     envuFree(wvalue);
+    return -(ret != 0);
 }
 
 char *envuGetHome() {
     // Check USERPROFILE
     char *userprof = envuGetEnv("USERPROFILE");
-    if (*userprof != 0)
+    if (userprof != NULL)
         return userprof;
     envuFree(userprof);
 
     // Check HOMEDRIVE and HOMEPATH
-    char *drive = envuGetEnv("HOMEDRIVE");
-    char *path = envuGetEnv("HOMEPATH");
-    if (*drive == 0) {
+    char *drive = envuGetEnv("HOMEDRIVE");  // "C:"
+    char *path = envuGetEnv("HOMEPATH");  // "\Users\name"
+    if (drive == NULL) {
         envuFree(drive);
         envuFree(path);
-        return AllocStrWithConst("C:\\");
+        return NULL;
     }
-    if (*path == 0) {
+    if (path == NULL) {
         envuFree(path);
         path = AllocStrWithConst("\\");
     }
@@ -257,11 +281,11 @@ char *envuGetUsername() {
 
     // Check USERNAME
     char *name = envuGetEnv("USERNAME");
-    if (*name != 0)
+    if (name != NULL)
         return name;
     envuFree(name);
 
-    return AllocEmptyStr();
+    return NULL;
 }
 
 char *envuGetOS() {

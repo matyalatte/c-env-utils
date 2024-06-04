@@ -7,6 +7,8 @@ const char *TRUE_EXE_PATH = "@BUILD_DIR@/@EXE_NAME@";
 #endif
 const char *TRUE_CWD = "@SOURCE_ROOT@";
 const char *TRUE_OS = "@OS@";
+const char *TRUE_HOME = "@HOME@";
+const char *TRUE_USERNAME = "@USERNAME@";
 #ifdef _WIN32
 #define WIN_DRIVE "@WIN_DRIVE@"
 #endif

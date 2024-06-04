@@ -26,7 +26,7 @@ char *envuGetExecutableDir() {
 void envuFree(void *p) {
     free(p);
 }
-#include <stdio.h>
+
 char **ParseEnvPathsBase(const char *env_path, int *path_count, char delim) {
     if (env_path == NULL)
         return NULL;

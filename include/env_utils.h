@@ -50,7 +50,7 @@ _ENVU_EXTERN void envuFree(void *p);
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents the path to the executing binary.
+ * @returns A string that represents the path to the executing binary. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetExecutablePath();
 
@@ -58,7 +58,7 @@ _ENVU_EXTERN char *envuGetExecutablePath();
  * Returns if the specified path is a file for not.
  *
  * @param path A path.
- * @returns If the specified path is a file for not.
+ * @returns If the specified path is a regular file or not.
  */
 _ENVU_EXTERN int envuFileExists(const char *path);
 
@@ -68,7 +68,7 @@ _ENVU_EXTERN int envuFileExists(const char *path);
  * @note Strings that are returned from this method should be freed with envuFree().
  *
  * @param path A path.
- * @returns A full path of the specified path.
+ * @returns A full path of the specified path. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetFullPath(const char *path);
 
@@ -78,7 +78,7 @@ _ENVU_EXTERN char *envuGetFullPath(const char *path);
  * @note Strings that are returned from this method should be freed with envuFree().
  *
  * @param path A path.
- * @returns A parent directory of the specified path.
+ * @returns A parent directory of the specified path. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetDirectory(const char *path);
 
@@ -87,7 +87,7 @@ _ENVU_EXTERN char *envuGetDirectory(const char *path);
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents the directory of the executing binary.
+ * @returns A string that represents the directory of the executing binary. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetExecutableDir();
 
@@ -96,7 +96,7 @@ _ENVU_EXTERN char *envuGetExecutableDir();
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents the current working directory.
+ * @returns A string that represents the current working directory. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetCwd();
 
@@ -104,8 +104,9 @@ _ENVU_EXTERN char *envuGetCwd();
  * Sets the current working directory.
  *
  * @param path A string that represents a directory.
+ * @returns 0 if successful. -1 indicates failure.
  */
-_ENVU_EXTERN void envuSetCwd(const char *path);
+_ENVU_EXTERN int envuSetCwd(const char *path);
 
 /**
  * Gets a value of an environment variable.
@@ -113,24 +114,27 @@ _ENVU_EXTERN void envuSetCwd(const char *path);
  * @note Strings that are returned from this method should be freed with envuFree().
  *
  * @param name A name of an environment variable.
- * @returns A value of an environment variable.
+ * @returns A value of an environment variable. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetEnv(const char *name);
 
 /**
  * Sets an environment variable.
  *
+ * @note On Windows, empty strings will be treated as null pointers.
+ *
  * @param name A name of an environment variable.
- * @param value A value of an environment variable.
+ * @param value A value of an environment variable. Or a null pointer to remove the variable.
+ * @returns 0 if successful. -1 indicates failure.
  */
-_ENVU_EXTERN void envuSetEnv(const char *name, const char *value);
+_ENVU_EXTERN int envuSetEnv(const char *name, const char *value);
 
 /**
  * Gets user's home directory.
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents user's home directory.
+ * @returns A string that represents user's home directory. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetHome();
 
@@ -139,7 +143,7 @@ _ENVU_EXTERN char *envuGetHome();
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents user name.
+ * @returns A string that represents user name. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetUsername();
 
@@ -149,7 +153,7 @@ _ENVU_EXTERN char *envuGetUsername();
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents running OS.
+ * @returns A string that represents running OS. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetOS();
 
@@ -159,7 +163,7 @@ _ENVU_EXTERN char *envuGetOS();
  * @note Arrays that are returned from this method should be freed with envuFreeEnvPaths().
  *
  * @param path_count The number of paths will be stored here if it's not a null pointer.
- * @returns A null-terminated array of strings.
+ * @returns A null-terminated array of strings. Or a null pointer if failed.
  */
 _ENVU_EXTERN char **envuGetEnvPaths(int *path_count);
 
@@ -171,7 +175,7 @@ _ENVU_EXTERN char **envuGetEnvPaths(int *path_count);
  *
  * @param env_path The value of the PATH variable.
  * @param path_count The number of paths will be stored here if it's not a null pointer.
- * @returns A null-terminated array of strings.
+ * @returns A null-terminated array of strings. Or a null pointer if failed.
  */
 _ENVU_EXTERN char **envuParseEnvPaths(const char *env_path, int *path_count);
 

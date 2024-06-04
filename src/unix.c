@@ -33,8 +33,12 @@ char *AllocStr(size_t size) {
 }
 
 char *AllocStrWithConst(const char *c) {
+    if (c == NULL)
+        return NULL;
     size_t str_len = strlen(c);
     char *str = AllocStr(str_len);
+    if (str == NULL)
+        return NULL;
     memcpy(str, c, str_len);
     return str;
 }
@@ -43,6 +47,8 @@ static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
     size_t str_len1 = strlen(c1);
     size_t str_len2 = strlen(c2);
     char *str = AllocStr(str_len1 + str_len2);
+    if (str == NULL)
+        return NULL;
     memcpy(str, c1, str_len1);
     memcpy(str + str_len1, c2, str_len2);
     return str;
@@ -57,7 +63,7 @@ char *envuGetExecutablePath() {
     uint32_t bufsize = PATH_MAX;
     int ret = _NSGetExecutablePath(path, &bufsize);
     if (ret || bufsize == 0 || *path == '\0')
-        return AllocStrWithConst("/");
+        return NULL;
     return AllocStrWithConst(path);
 }
 #elif defined(__FreeBSD__)
@@ -76,7 +82,7 @@ char *envuGetExecutablePath() {
     path[PATH_MAX] = 0;
     GetExecutablePathFreeBSD(path);
     if (*path == '\0')
-        return AllocStrWithConst("/");
+        return NULL;
     return AllocStrWithConst(path);
 }
 #elif defined(__OpenBSD__)
@@ -108,7 +114,7 @@ char *envuGetExecutablePath() {
     // try to get argv[0]
     char *argv0 = getArgv0();
     if (argv0 == NULL)  // failed to get argv[0]
-        return AllocStrWithConst("/");
+        return NULL;
 
     // Assume argv[0] as an absolute path or a related path
     char *fullpath = envuGetFullPath(argv0);
@@ -124,7 +130,7 @@ char *envuGetExecutablePath() {
     char **paths = envuGetEnvPaths(&count);
     if (paths == NULL) {
         envuFree(argv0);
-        return AllocStrWithConst("/");
+        return NULL;
     }
 
     for (char **p = paths; p < paths + count; p++) {
@@ -158,7 +164,7 @@ char *envuGetExecutablePath() {
         return fullpath;
 
     // Failed to get exe path
-    return AllocStrWithConst("/");
+    return NULL;
 }
 #elif defined(__HAIKU__)
 // Haiku OS requires get_next_image_info to get the executable path.
@@ -169,7 +175,7 @@ char *envuGetExecutablePath() {
         if (info.type == B_APP_IMAGE)
             return AllocStrWithConst(info.name);
     }
-    return AllocStrWithConst("/");
+    return NULL;
 }
 #else
 // Linux distributons support readlink to get the executable path.
@@ -186,6 +192,7 @@ static int TryReadlink(const char *link, char *path, int path_size) {
 static void GetExecutablePathUnix(char *path) {
     int path_size = 0;
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
+    // TODO: path can contain "." on NetBSD somehow.
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
     path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
     path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
@@ -201,13 +208,13 @@ char *envuGetExecutablePath() {
         return AllocStrWithConst(path);
 
     // Failed to get exe path
-    return AllocStrWithConst("/");
+    return NULL;
 }
 #endif
 
 int envuFileExists(const char *path) {
     struct stat buffer;
-    return (stat(path, &buffer) == 0);
+    return (stat(path, &buffer) == 0) && S_ISREG(buffer.st_mode);
 }
 
 // TODO: Clean this dirty code up
@@ -228,6 +235,11 @@ char *envuGetFullPath(const char *path) {
     }
 
     char *resolved = AllocStr(strlen(abs_path));
+    if (abs_path == NULL || resolved == NULL) {
+        envuFree(abs_path);
+        envuFree(resolved);
+        return NULL;
+    }
 
     char *abs_p = abs_path;
     char *res_p = resolved;
@@ -289,7 +301,7 @@ char *envuGetDirectory(const char *path) {
     char *dir = dirname(copied_path);
     if (dir == NULL) {
         free(copied_path);
-        return AllocStrWithConst("/");
+        return NULL;
     }
     char *ret = AllocStrWithConst(dir);
     free(copied_path);
@@ -299,23 +311,35 @@ char *envuGetDirectory(const char *path) {
 char *envuGetCwd() {
     char cwd[PATH_MAX + 1];
     cwd[PATH_MAX] = 0;
-    getcwd(cwd, PATH_MAX);
-    return AllocStrWithConst(cwd);
+    char *ret = getcwd(cwd, PATH_MAX);
+    return AllocStrWithConst(ret);
 }
 
-void envuSetCwd(const char *path) {
-    chdir(path);
+int envuSetCwd(const char *path) {
+    if (path == NULL)
+        return -1;
+    int ret = chdir(path);
+    return -(ret != 0);
 }
 
 char *envuGetEnv(const char *name) {
+    if (name == NULL)
+        return NULL;
     char *str = getenv(name);
     if (str == NULL)
-        return AllocStrWithConst("");
+        return NULL;
     return AllocStrWithConst(str);
 }
 
-void envuSetEnv(const char *name, const char *value) {
-    setenv(name, value, 1);
+int envuSetEnv(const char *name, const char *value) {
+    if (name == NULL)
+        return -1;
+    int ret;
+    if (value == NULL)
+        ret = unsetenv(name);
+    else
+        ret = setenv(name, value, 1);
+    return -(ret != 0);
 }
 
 static struct passwd *getpwuid_safe(char **buf) {
@@ -353,7 +377,7 @@ char *envuGetHome() {
     if (homedir == NULL) {
         // failed to get homedir
         free(buf);
-        return AllocStrWithConst("/");
+        return NULL;
     }
     char *str = AllocStrWithConst(homedir);
     free(buf);
@@ -374,7 +398,7 @@ char *envuGetUsername() {
     if (name == NULL) {
         // failed to get username
         free(buf);
-        return AllocStrWithConst("");
+        return NULL;
     }
     char *str = AllocStrWithConst(name);
     free(buf);
@@ -386,7 +410,7 @@ char *envuGetOS() {
     struct utsname buf = { 0 };
     // Note: uname(&buf) can be positive on Solaris
     if (uname(&buf) == -1) {
-        return AllocStrWithConst("");
+        return NULL;
     }
     return AllocStrWithConst(buf.sysname);
 }

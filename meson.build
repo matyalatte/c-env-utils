@@ -44,7 +44,7 @@ elif envu_OS == 'haiku'
 endif
 
 if envu_compiler != 'msvc'
-    # Some platforms seem to use '-Wstrict-prototypes' as default
+    # Some platforms (e.g. FreeBSD) seem to use '-Wstrict-prototypes' as default
     envu_c_args += ['-Wno-strict-prototypes']
 endif
 
@@ -92,6 +92,8 @@ if get_option('cli')
     executable('env_utils_cli',
         envu_sources + ['src/env_utils_cli.c'],
         dependencies: env_utils_dep,
+        c_args: envu_c_args,
+        cpp_args: envu_c_args,
         install : false)
 endif
 

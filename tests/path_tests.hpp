@@ -1,4 +1,6 @@
 #pragma once
+// Tests for envu*EnvPaths functions and the functions that take paths
+
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
@@ -8,6 +10,19 @@
 
 // TODO: test with long paths
 // TODO: test with unicode strings
+
+TEST(PathTest, envuFileExists) {
+    std::vector<std::pair<const char*, int>> cases = {
+        { NULL, 0 },
+        { "", 0 },
+        { TRUE_EXE_PATH, 1 },
+        { TRUE_BUILD_DIR, 0 },
+        // TODO: test with relative paths
+    };
+    for (auto c : cases) {
+        EXPECT_EQ(c.second, envuFileExists(c.first)) << "  c.first: " << c.first << std::endl;
+    }
+}
 
 TEST(PathTest, envuGetFullPathAbsolute) {
     std::vector<std::pair<const char*, const char*>> cases = {
@@ -34,6 +49,8 @@ TEST(PathTest, envuGetFullPathAbsolute) {
         { "/", WIN_DRIVE ":\\" },
         // Windows reads a sequence of dots as "."
         { "/usr/lib/....", WIN_DRIVE ":\\usr\\lib" },
+        // Windows removes empty directory names
+        { "/usr/lib//", WIN_DRIVE ":\\usr\\lib" },
 #else
         { "/usr/lib", "/usr/lib" },
         { "/usr/lib/", "/usr/lib" },
@@ -48,12 +65,24 @@ TEST(PathTest, envuGetFullPathAbsolute) {
         { "/", "/" },
         // a sequence of dots can be a file name on unix
         { "/usr/lib/....", "/usr/lib/...." },
+        // empty directory names remain on unix
+        { "/usr/lib//", "/usr/lib/" },
 #endif
         { NULL, NULL },
     };
     for (auto c : cases) {
         char* fullpath = envuGetFullPath(c.first);
-        EXPECT_STREQ(c.second, fullpath);
+        EXPECT_STREQ(c.second, fullpath) << "  c.first: " << c.first << std::endl;
+        envuFree(fullpath);
+    }
+}
+
+TEST(PathTest, envuGetFullPathLongPath) {
+    std::vector<std::pair<const char*, const char*>> cases = {
+    };
+    for (auto c : cases) {
+        char* fullpath = envuGetFullPath(c.first);
+        EXPECT_STREQ(c.second, fullpath) << "  c.first: " << c.first << std::endl;
         envuFree(fullpath);
     }
 }
@@ -76,7 +105,7 @@ TEST(PathTest, envuGetFullPathRelative) {
             expected += std::string("/") + c.second;
         #endif
         }
-        EXPECT_STREQ(expected.c_str(), fullpath);
+        EXPECT_STREQ(expected.c_str(), fullpath) << "  c.first: " << c.first << std::endl;
         envuFree(fullpath);
     }
 }
@@ -100,7 +129,7 @@ TEST(PathTest, envuGetDirectory) {
     };
     for (auto c : cases) {
         char* dir = envuGetDirectory(c.first);
-        EXPECT_STREQ(c.second, dir);
+        EXPECT_STREQ(c.second, dir) << "  c.first: " << c.first << std::endl;
         envuFree(dir);
     }
 }
@@ -134,14 +163,11 @@ TEST(PathTest, envuParseEnvPaths) {
     for (auto c : cases) {
         int count;
         char** paths = envuParseEnvPaths(c.first, &count);
-        if (c.first == NULL) {
-            EXPECT_EQ(NULL, paths);
-            continue;
-        }
         EXPECT_EQ(c.second.size(), count);
         for (int i = 0; i < count; i++) {
-            EXPECT_STREQ(c.second[i], paths[i]);
+            EXPECT_STREQ(c.second[i], paths[i]) << "  c.first: " << c.first << std::endl;
         }
+        EXPECT_EQ(NULL, paths[count]);
         envuFreeEnvPaths(paths);
     }
 }
@@ -149,4 +175,47 @@ TEST(PathTest, envuParseEnvPaths) {
 TEST(PathTest, envuParseEnvPathsNull) {
     char** paths = envuParseEnvPaths(NULL, NULL);
     EXPECT_EQ(NULL, paths);
+}
+
+TEST(PathTest, envuFreeEnvPathsNull) {
+    envuFreeEnvPaths(NULL);
+}
+
+TEST(PathTest, envuGetEnvPaths) {
+    std::vector<std::pair<const char*, std::vector<const char*>>> cases = {
+        { "path", { "path" } },
+#ifdef _WIN32
+        { "C:\\Program Files;C:\\Users\\me", { "C:\\Program Files", "C:\\Users\\me" } },
+#else
+        { "/Program Files:/Users/me", { "/Program Files", "/Users/me" } },
+#endif
+    };
+    char *env_path = envuGetEnv("PATH");
+    for (auto c : cases) {
+        int count;
+        envuSetEnv("PATH", c.first);
+        char** paths = envuGetEnvPaths(&count);
+        EXPECT_EQ(c.second.size(), count);
+        for (int i = 0; i < count; i++) {
+            EXPECT_STREQ(c.second[i], paths[i]) << "  c.first: " << c.first << std::endl;
+        }
+        EXPECT_EQ(NULL, paths[count]);
+        envuFreeEnvPaths(paths);
+    }
+
+    // restore the PATH variable
+    envuSetEnv("PATH", env_path);
+    envuFree(env_path);
+}
+
+TEST(PathTest, envuGetEnvPathsNull) {
+    char *env_path = envuGetEnv("PATH");
+
+    envuSetEnv("PATH", NULL);
+    char** paths = envuGetEnvPaths(NULL);
+    EXPECT_EQ(NULL, paths);
+
+    // restore the PATH variable
+    envuSetEnv("PATH", env_path);
+    envuFree(env_path);
 }
