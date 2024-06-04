@@ -31,27 +31,38 @@ void PrintUTF8(const char* fmt, ...) {
 #endif  // _WIN32
 
 int main(void) {
-    char *exe_path = envuGetExecutablePath();
-    char *exe_dir = envuGetExecutableDir();
-    char *cwd = envuGetCwd();
-    char *home = envuGetHome();
-    char *username = envuGetUsername();
-    char *os = envuGetOS();
-    char *paths = envuGetEnv("PATH");
     PRINTF("c-env-utils v%s\n", envuGetVersion());
     PRINTF("%s", "\n");
+
+    char *exe_path = envuGetExecutablePath();
     PRINTF("Executable path: %s\n", exe_path);
-    PRINTF("Executable dir: %s\n", exe_dir);
-    PRINTF("CWD: %s\n", cwd);
-    PRINTF("Home: %s\n", home);
-    PRINTF("User: %s\n", username);
-    PRINTF("OS: %s\n", os);
-    PRINTF("PATH: %s\n", paths);
     envuFree(exe_path);
+
+    char *exe_dir = envuGetExecutableDir();
+    PRINTF("Executable dir: %s\n", exe_dir);
     envuFree(exe_dir);
+
+    char *cwd = envuGetCwd();
+    PRINTF("CWD: %s\n", cwd);
     envuFree(cwd);
+
+    char *home = envuGetHome();
+    PRINTF("Home: %s\n", home);
     envuFree(home);
+
+    char *username = envuGetUsername();
+    PRINTF("User: %s\n", username);
     envuFree(username);
+
+    char *os = envuGetOS();
+    PRINTF("OS: %s\n", os);
     envuFree(os);
-    envuFree(paths);
+
+    int count;
+    char **paths = envuGetEnvPaths(&count);
+    PRINTF("%s", "PATH:\n");
+    for (char **p = paths; p < paths + count; p++) {
+        PRINTF("  %s\n", *p);
+    }
+    envuFreeEnvPaths(paths);
 }

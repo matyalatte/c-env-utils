@@ -47,10 +47,14 @@ int main(void) {
     printf("User: %s\n", username);
     envuFree(username);
 
-    // An environment variable
-    char *paths = envuGetEnv("PATH");
-    printf("PATH: %s\n", paths);
-    envuFree(paths);
+    // Parse the PATH variable
+    int count;
+    char **paths = envuGetEnvPaths(&count);
+    printf("%s", "PATH:\n");
+    for (char **p = paths; p < paths + count; p++) {
+        printf("  %s\n", *p);
+    }
+    envuFreeEnvPaths(paths);
     return 0;
 }
 ```
