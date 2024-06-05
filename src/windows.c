@@ -153,6 +153,7 @@ char *envuGetDirectory(const char *path) {
 
     char *copied_path = AllocStrWithConst(path);
 
+    // TODO: read the path backwards.
     char *p = copied_path;
     char *slash_p[3] = { NULL, NULL, NULL };
     while (*p != '\0') {
@@ -257,7 +258,7 @@ char *envuGetHome() {
     // Check HOMEDRIVE and HOMEPATH
     char *drive = envuGetEnv("HOMEDRIVE");  // "C:"
     char *path = envuGetEnv("HOMEPATH");  // "\Users\name"
-    if (drive == NULL) {
+    if (drive == NULL || drive[strlen(drive) - 1] != ':') {
         envuFree(drive);
         envuFree(path);
         return NULL;

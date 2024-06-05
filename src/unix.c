@@ -218,6 +218,7 @@ char *envuGetExecutablePath() {
 #ifdef __NetBSD__
         // procfs does not remove dot segments from paths on NetBSD.
         // So, we need to remove them by ourselves.
+        // TODO: use realpath() to resolve symlinks.
         return envuGetFullPath(path);
 #else
         return AllocStrWithConst(path);
@@ -234,7 +235,6 @@ int envuFileExists(const char *path) {
 }
 
 // TODO: Clean this dirty code up
-// TODO: This does not resolve symlinks!
 char *envuGetFullPath(const char *path) {
     if (path == NULL)
         return NULL;
