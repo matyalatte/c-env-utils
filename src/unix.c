@@ -22,7 +22,14 @@
 #include "env_utils.h"
 #include "env_utils_priv.h"
 
+#ifdef __sun
+// Solaris use MAXPATHLEN instead of PATH_MAX
+#include <sys/param.h>
+#define PATH_MAX MAXPATHLEN
+#endif
+
 #ifndef PATH_MAX
+#warning ("Warning: Failed to get PATH_MAX. Use 512 for it.")
 #define PATH_MAX  512
 #endif
 
@@ -223,6 +230,7 @@ int envuFileExists(const char *path) {
 }
 
 // TODO: Clean this dirty code up
+// TODO: This does not resolve symlinks!
 char *envuGetFullPath(const char *path) {
     if (path == NULL)
         return NULL;
