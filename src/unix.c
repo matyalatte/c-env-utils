@@ -23,13 +23,17 @@
 #include "env_utils_priv.h"
 
 #ifdef __sun
-// Solaris use MAXPATHLEN instead of PATH_MAX
+// Solaris uses MAXPATHLEN instead of PATH_MAX
 #include <sys/param.h>
 #define PATH_MAX MAXPATHLEN
+// _GNU_SOURCE does not seem to work fine on Solaris.
+// So, we declare setenv and unsetenv here.
+int setenv(const char *envname, const char *envval, int overwrite);
+int unsetenv(const char *name);
 #endif
 
 #ifndef PATH_MAX
-#warning ("Warning: Failed to get PATH_MAX. Use 512 for it.")
+#warning("Warning: Failed to get PATH_MAX. The compiler uses 512 for it.")
 #define PATH_MAX  512
 #endif
 

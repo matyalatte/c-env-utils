@@ -9,9 +9,11 @@
 #include "env_utils_priv.h"
 
 #ifndef MAX_PATH
+#warning("Warning: Failed to get MAX_PATH. The compiler uses 260 for it.")
 #define MAX_PATH  260
 #endif
 #ifndef UNLEN
+#warning("Warning: Failed to get UNLEN. The compiler uses 256 for it.")
 #define UNLEN 256
 #endif
 
