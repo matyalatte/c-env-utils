@@ -22,13 +22,22 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define SIZET_TO_INT(N) (int)MIN(N, INT_MAX)
 
-static wchar_t *AllocWstr(size_t size) {
+wchar_t *AllocWstr(size_t size) {
     wchar_t *wstr;
     wstr = (wchar_t *)calloc(size + 1, sizeof(wchar_t));
     return wstr;
 }
 
-#define AllocEmptyWstr() AllocWstr(0)
+wchar_t *AllocWstrWithConst(const wchar_t *c) {
+    if (c == NULL)
+        return NULL;
+    size_t str_len = wcslen(c);
+    wchar_t *wstr = AllocWstr(str_len);
+    if (wstr == NULL)
+        return NULL;
+    memcpy_s(wstr, str_len * sizeof(wchar_t), c, str_len * sizeof(wchar_t));
+    return wstr;
+}
 
 wchar_t *envuUTF8toUTF16(const char* str) {
     if (str == NULL)
@@ -293,6 +302,16 @@ char *envuGetUsername() {
 
 char *envuGetOS() {
     return AllocStrWithConst("Windows");
+}
+
+char *envuGetOSVersion() {
+    wchar_t *wstr = getOSInfoFromWMI(L"Version");
+    return envuUTF16toUTF8(wstr);
+}
+
+char *envuGetOSProductName() {
+    wchar_t *wstr = getOSInfoFromWMI(L"Caption");
+    return envuUTF16toUTF8(wstr);
 }
 
 char **envuParseEnvPaths(const char *env_path, int *path_count) {

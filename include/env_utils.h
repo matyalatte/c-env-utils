@@ -153,9 +153,38 @@ _ENVU_EXTERN char *envuGetUsername();
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents running OS. Or a null pointer if failed.
+ * @returns A string that represents running OS.
+ *          Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetOS();
+
+/**
+ * Gets the version of running OS.
+ * e.g. "10.0.19045" for a build of Windows 10,
+ *      "19.5.0" for a build of macOS 10.15,
+ *      and "5.15.0" for a build of Ubuntu 20.04.
+ *
+ * @note Strings that are returned from this method should be freed with envuFree().
+ *
+ * @returns A string that represents the version of running OS.
+ *          Or a null pointer if failed.
+ */
+_ENVU_EXTERN char *envuGetOSVersion();
+
+/**
+ * Gets the product name and its version of running OS.
+ * e.g. "Windows 10 Home", "Mac OS X 10.15.5", and "Ubuntu 20.04"
+ *
+ * @warning Note that the return value can be disguised by users.
+ *          For example, your program may execute unexpected codes
+ *          if you use conditional branching by the return value in operations that call external binaries.
+ *
+ * @note Strings that are returned from this method should be freed with envuFree().
+ *
+ * @returns A string that represents the product name and its version of running OS.
+ *          Or a null pointer if failed.
+ */
+_ENVU_EXTERN char *envuGetOSProductName();
 
 /**
  * Gets the environment paths from the PATH variable.

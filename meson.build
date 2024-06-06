@@ -52,7 +52,8 @@ endif
 # set source files
 envu_sources = ['src/common.c']
 if envu_OS == 'windows'
-    envu_sources += ['src/windows.c']
+    add_languages('cpp', required: true)
+    envu_sources += ['src/windows.c', 'src/wmi.cpp']
 else
     envu_sources += ['src/unix.c']
 endif
@@ -60,7 +61,7 @@ endif
 # set winapi libraries
 win_lib_deps = []
 if envu_OS == 'windows'
-    foreach lib : ['kernel32', 'advapi32']
+    foreach lib : ['kernel32', 'advapi32', 'ole32', 'oleaut32', 'wbemuuid']
         win_lib_deps += [
             meson.get_compiler('c').find_library(lib,
                 required: true),
@@ -86,6 +87,7 @@ endif
 # dependency for other binaries
 env_utils_dep = declare_dependency(
     include_directories: include_directories('./include'),
+    dependencies: win_lib_deps,
     link_with : env_utils)
 
 if get_option('cli')

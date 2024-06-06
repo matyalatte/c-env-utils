@@ -18,6 +18,7 @@
 #include <limits.h>
 #include <libgen.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "env_utils.h"
 #include "env_utils_priv.h"
@@ -430,6 +431,168 @@ char *envuGetOS() {
         return NULL;
     }
     return AllocStrWithConst(buf.sysname);
+}
+
+static inline int is_numeric(char c) {
+    return (c >= '0' && c <= '9') || c == '.';
+}
+
+static inline int is_alphabet(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+char *envuGetOSVersion() {
+    struct utsname buf = { 0 };
+    // Note: uname(&buf) can be positive on Solaris
+    if (uname(&buf) == -1) {
+        return NULL;
+    }
+    char *ver = buf.release;
+    if (ver == NULL || *ver == '\0')
+        return NULL;
+
+    // buf.release could be of the form x.y.z-*
+    // We try to make it numeric (x.y.z) here.
+    char *vp = ver;
+    while(is_numeric(*vp)) {
+        vp++;
+    }
+    if (vp != ver && *vp == '-') {
+        // replace the first '-' with a null terminator.
+        *vp = '\0';
+    }
+
+    return AllocStrWithConst(ver);
+}
+
+#ifdef __APPLE__
+static char *ParseReleaseMac() {
+    // TODO: implement this function.
+    return NULL;
+
+    // Get ProductName and ProductVersion
+    // from /System/Library/CoreServices/SystemVersion.plist
+
+    /*
+    char *prod_name = NULL;
+    char *prod_ver = NULL;
+    char *tmp = AllocStrWithTwoConsts(prod_name, " ");
+    char *ret = AllocStrWithTwoConsts(tmp, prod_ver);
+    envuFree(prod_name);
+    envuFree(prod_ver);
+    envuFree(tmp);
+    */
+}
+#elif defined(__linux__)
+static char *ParseReleaseLinux() {
+    // Get the value of "PRETTY_NAME" in /etc/os-release
+    FILE *fptr;
+    fptr = fopen("/etc/os-release", "r");
+    if (!fptr)
+        return NULL;
+
+    char *lineptr = NULL;
+    size_t linemax = 0;
+    ssize_t size = 0;
+    const char key[] = "PRETTY_NAME";
+    char *pretty_name = NULL;
+    while (1) {
+        // get a line.
+        size = getline(&lineptr, &linemax, fptr);
+        if (size < 0)
+            break;
+        lineptr[size - 1] = '\0';
+
+        // check if a key is "PRETTY_NAME"
+        const char *lp = lineptr;
+        const char *kp = key;
+        while (*kp != '\0' && *lp != '\0' && *lp != '=' && *kp == *lp) {
+            lp++;
+            kp++;
+        }
+        if (*kp != '\0' || *lp != '=') {
+            // The key is not "PRETTY_NAME"
+            continue;
+        }
+        lp++;
+
+        // remove quotes if exist
+        if (*lp == '"')
+            lp++;
+        if (lineptr[size - 2] == '"')
+            lineptr[size - 2] = '\0';
+
+        pretty_name = AllocStrWithConst(lp);
+        break;
+    }
+    free(lineptr);
+    return pretty_name;
+}
+#elif defined(__sun)
+static char *ParseReleaseSolaris() {
+    // Get the first alphanumeric part in /etc/release
+
+    FILE *fptr;
+    fptr = fopen("/etc/release", "r");
+    if (!fptr)
+        return NULL;
+
+    char *lineptr = NULL;
+    size_t linemax = 0;
+    ssize_t size = 0;
+    size = getline(&lineptr, &linemax, fptr);
+    lineptr[size] = '\0';
+    const char *start_p = lineptr;
+
+    // skip white spaces
+    while (*start_p == ' ' && *start_p != '\0') {
+        start_p++;
+    }
+    if (*start_p == '\0') {
+        free(lineptr);
+        return NULL;
+    }
+
+    // cut non-alphanumeric part off.
+    const char *end_p = start_p;
+    while (*end_p != '\0' && (is_alphabet(*end_p) || is_numeric(*end_p) || *end_p == ' ')) {
+        end_p++;
+    }
+    if (*end_p != *start_p && *(end_p - 1) == ' ') {
+        end_p--;
+    }
+    *end_p = '\0';
+
+    char *pretty_name = AllocStrWithConst(start_p);
+    free(lineptr);
+    return pretty_name;
+}
+#endif
+
+char *envuGetOSProductName() {
+#ifdef __APPLE__
+    return ParseReleaseMac();
+#elif defined(__linux__)
+    return ParseReleaseLinux();
+#elif defined(__sun)
+    return ParseReleaseSolaris();
+#else
+    // concat envuGetOS and envuGetOSVersion.
+    char *os = envuGetOS();
+    if (os == NULL)
+        return NULL;
+
+    char *os_ver = envuGetOSVersion();
+    if (os_ver == NULL)
+        return os;
+
+    char *tmp = AllocStrWithTwoConsts(os, " ");
+    char *ret = AllocStrWithTwoConsts(tmp, os_ver);
+    envuFree(os);
+    envuFree(os_ver);
+    envuFree(tmp);
+    return ret;
+#endif
 }
 
 char **envuParseEnvPaths(const char *env_path, int *path_count) {

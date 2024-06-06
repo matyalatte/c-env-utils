@@ -11,6 +11,13 @@ extern char *AllocStr(size_t size);
 #define AllocEmptyStr() AllocStr(0)
 extern char *AllocStrWithConst(const char *c);
 
+#ifdef _WIN32
+extern wchar_t *AllocWstr(size_t size);
+#define AllocEmptyWstr() AllocWstr(0)
+extern wchar_t *AllocWstrWithConst(const wchar_t *c);
+extern wchar_t *getOSInfoFromWMI(const wchar_t *key);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
