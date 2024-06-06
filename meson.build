@@ -20,6 +20,11 @@ envu_OS = host_machine.system()
 envu_compiler = meson.get_compiler('c').get_id()
 envu_is_release = get_option('buildtype').startswith('release') or (get_option('buildtype').startswith('custom') and not get_option('debug'))
 
+# Requires cpp on Windows and Haiku
+if envu_OS == 'windows' or envu_OS == 'haiku'
+    add_languages('cpp', required: true)
+endif
+
 # set compiler and linker options
 if envu_OS == 'darwin' and not meson.is_subproject()
     languages = ['c']
@@ -40,39 +45,45 @@ if envu_OS == 'darwin' and not meson.is_subproject()
     else
         warning('Universal build is disabled since your SDKs do not support it.')
     endif
-elif envu_OS == 'haiku'
-    envu_link_args += ['-lbe']
 endif
 
-if envu_compiler != 'msvc'
-    # Some platforms (e.g. FreeBSD) seem to use '-Wstrict-prototypes' as default
-    envu_c_args += ['-Wno-strict-prototypes']
+if envu_OS == 'freebsd'
+    # Ignore some warnings on FreeBSD
+    envu_c_args += ['-Wno-strict-prototypes', '-Wno-c11-extensions']
 endif
 
 # set source files
 envu_sources = ['src/common.c']
 if envu_OS == 'windows'
-    add_languages('cpp', required: true)
     envu_sources += ['src/windows.c', 'src/wmi.cpp']
 else
     envu_sources += ['src/unix.c']
 endif
+if envu_OS == 'haiku'
+    envu_sources += ['src/haiku.cpp']
+endif
 
-# set winapi libraries
-win_lib_deps = []
+# set dynamic linked libraries
+envu_lib_deps = []
 if envu_OS == 'windows'
     foreach lib : ['kernel32', 'advapi32', 'ole32', 'oleaut32', 'wbemuuid']
-        win_lib_deps += [
+        envu_lib_deps += [
             meson.get_compiler('c').find_library(lib,
                 required: true),
         ]
     endforeach
 endif
+if envu_OS == 'haiku'
+    envu_lib_deps += [
+        meson.get_compiler('c').find_library('be',
+            required: true),
+    ]
+endif
 
 # main binary
 env_utils = library('env_utils',
     envu_sources,
-    dependencies: win_lib_deps,
+    dependencies: envu_lib_deps,
     c_args: envu_c_args,
     cpp_args: envu_c_args,
     link_args: envu_link_args,
@@ -87,7 +98,7 @@ endif
 # dependency for other binaries
 env_utils_dep = declare_dependency(
     include_directories: include_directories('./include'),
-    dependencies: win_lib_deps,
+    dependencies: envu_lib_deps,
     link_with : env_utils)
 
 if get_option('cli')

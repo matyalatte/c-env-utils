@@ -28,9 +28,10 @@
 #include <sys/param.h>
 #define PATH_MAX MAXPATHLEN
 // _GNU_SOURCE does not seem to work fine on Solaris.
-// So, we declare setenv and unsetenv here.
+// So, we declare some functions here.
 int setenv(const char *envname, const char *envval, int overwrite);
 int unsetenv(const char *name);
+ssize_t getline(char **lineptr, size_t *n, FILE *stream);
 #endif
 
 #ifndef PATH_MAX
@@ -433,14 +434,6 @@ char *envuGetOS() {
     return AllocStrWithConst(buf.sysname);
 }
 
-static inline int is_numeric(char c) {
-    return (c >= '0' && c <= '9') || c == '.';
-}
-
-static inline int is_alphabet(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
 char *envuGetOSVersion() {
     struct utsname buf = { 0 };
     // Note: uname(&buf) can be positive on Solaris
@@ -541,8 +534,8 @@ static char *ParseReleaseSolaris() {
     size_t linemax = 0;
     ssize_t size = 0;
     size = getline(&lineptr, &linemax, fptr);
-    lineptr[size] = '\0';
-    const char *start_p = lineptr;
+    lineptr[size - 1] = '\0';
+    char *start_p = lineptr;
 
     // skip white spaces
     while (*start_p == ' ' && *start_p != '\0') {
@@ -554,7 +547,7 @@ static char *ParseReleaseSolaris() {
     }
 
     // cut non-alphanumeric part off.
-    const char *end_p = start_p;
+    char *end_p = start_p;
     while (*end_p != '\0' && (is_alphabet(*end_p) || is_numeric(*end_p) || *end_p == ' ')) {
         end_p++;
     }
@@ -571,18 +564,27 @@ static char *ParseReleaseSolaris() {
 
 char *envuGetOSProductName() {
 #ifdef __APPLE__
+    // parse /System/Library/CoreServices/SystemVersion.plist on mac
     return ParseReleaseMac();
 #elif defined(__linux__)
+    // parse /etc/os-release on Linux
     return ParseReleaseLinux();
 #elif defined(__sun)
+    // parse /etc/os-release on Solaris
     return ParseReleaseSolaris();
 #else
-    // concat envuGetOS and envuGetOSVersion.
+    // concat envuGetOS and envuGetOSVersion on other platforms.
     char *os = envuGetOS();
     if (os == NULL)
         return NULL;
 
+#ifdef __HAIKU__
+    // Haiku requires native APIs to get the true version string.
+    // https://discuss.haiku-os.org/t/getting-the-haiku-version/13899
+    char *os_ver = getOSVersionHaiku();
+#else
     char *os_ver = envuGetOSVersion();
+#endif
     if (os_ver == NULL)
         return os;
 
