@@ -447,7 +447,7 @@ char *envuGetOSVersion() {
     // buf.release could be of the form x.y.z-*
     // We try to make it numeric (x.y.z) here.
     char *vp = ver;
-    while(is_numeric(*vp)) {
+    while (is_numeric(*vp)) {
         vp++;
     }
     if (vp != ver && *vp == '-') {
