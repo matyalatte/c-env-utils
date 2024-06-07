@@ -121,8 +121,15 @@ int envuFileExists(const char *path) {
     return (ret != INVALID_FILE_ATTRIBUTES) && ((ret & FILE_ATTRIBUTE_DIRECTORY) == 0);
 }
 
+char *envuGetRealPath(const char *path) {
+    // TODO: Search the PATH variables, and resolve symlinks.
+    char *fullpath = envuGetFullPath(path);
+    if (fullpath == NULL || !envuFileExists(fullpath))
+        return NULL;
+    return fullpath;
+}
+
 char *envuGetFullPath(const char *path) {
-    // TODO: https://learn.microsoft.com/ja-jp/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew
     if (path == NULL)
         return NULL;
     if (path[0] == '\0')

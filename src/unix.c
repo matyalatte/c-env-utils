@@ -68,7 +68,7 @@ static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
     return str;
 }
 
-static char *envuGetRealPath(const char *path) {
+char *envuGetRealPath(const char *path) {
     char str[PATH_MAX + 1];
     str[PATH_MAX] = '\0';
     char *resolved = realpath(path, str);
@@ -474,7 +474,7 @@ CFDictionaryRef _CFCopyServerVersionDictionary();
 CFDictionaryRef _CFCopySystemVersionDictionary();
 
 static char *CFStoChar(CFStringRef cfstr) {
-    // Note: The lenght of string should be smaller than 256.
+    // Note: The length of string should be smaller than 256.
     char str[256];
     int ret = CFStringGetCString(cfstr, str, sizeof(str), kCFStringEncodingUTF8);
     if (ret) {
@@ -488,24 +488,24 @@ static char *ParseReleaseMac() {
     // Get ProductName and ProductVersion
     // from /System/Library/CoreServices/*Version.plist
 
-    CFDictionaryRef dict= NULL;
-	CFStringRef prod_name = NULL;
-	CFStringRef prod_ver = NULL;
+    CFDictionaryRef dict = NULL;
+    CFStringRef prod_name = NULL;
+    CFStringRef prod_ver = NULL;
 
     // Try ServerVersion.plist
-	dict = _CFCopyServerVersionDictionary();
-	if (dict == NULL) {
+    dict = _CFCopyServerVersionDictionary();
+    if (dict == NULL) {
         // Try SystemVersion.plist
-		dict = _CFCopySystemVersionDictionary();
+        dict = _CFCopySystemVersionDictionary();
     }
-	if (dict == NULL)
+    if (dict == NULL)
         return NULL;  // Failed to get *.plist
 
-	prod_name = CFDictionaryGetValue(dict, CFSTR("ProductName"));
+    prod_name = CFDictionaryGetValue(dict, CFSTR("ProductName"));
     if (prod_name == NULL)
         return NULL;
 
-	prod_ver = CFDictionaryGetValue(dict, CFSTR("ProductVersion"));
+    prod_ver = CFDictionaryGetValue(dict, CFSTR("ProductVersion"));
     if (prod_ver == NULL) {
         // Return prod_name
         char *cstr = CFStoChar(prod_name);
