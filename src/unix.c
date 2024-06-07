@@ -77,7 +77,7 @@ char *envuGetRealPath(const char *path) {
 
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
-char *envuGetExecutablePath() {
+static inline char *getExecutablePathApple() {
     char path[PATH_MAX + 1];
     path[PATH_MAX] = '\0';
     uint32_t bufsize = PATH_MAX;
@@ -92,19 +92,16 @@ char *envuGetExecutablePath() {
 }
 #elif defined(__FreeBSD__)
 // FreeBSD requires sysctl to get the executable path.
-static void GetExecutablePathFreeBSD(char *path) {
+static inline char *getExecutablePathFreeBSD() {
+    char path[PATH_MAX + 1];
+    path[PATH_MAX] = 0;
+
     size_t path_size = PATH_MAX;
     int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
     int error = sysctl(mib, 4, path, &path_size, NULL, 0);
     if (error < 0 || path_size == 0)
         path_size = 0;
     path[path_size] = 0;
-}
-
-char *envuGetExecutablePath() {
-    char path[PATH_MAX + 1];
-    path[PATH_MAX] = 0;
-    GetExecutablePathFreeBSD(path);
     if (*path == '\0')
         return NULL;
     return AllocStrWithConst(path);
@@ -130,7 +127,7 @@ static char *getArgv0() {
     return argv0;
 }
 
-char *envuGetExecutablePath() {
+static inline char *getExecutablePathOpenBSD() {
     // try readlink
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
@@ -184,7 +181,7 @@ char *envuGetExecutablePath() {
 }
 #elif defined(__HAIKU__)
 // Haiku OS requires get_next_image_info to get the executable path.
-char *envuGetExecutablePath() {
+static inline char *getExecutablePathHaiku() {
     int32_t cookie = 0;
     image_info info;
     while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
@@ -194,8 +191,7 @@ char *envuGetExecutablePath() {
     return NULL;
 }
 #else
-// Linux distributons support readlink to get the executable path.
-static int TryReadlink(const char *link, char *path, int path_size) {
+static int tryReadlink(const char *link, char *path, int path_size) {
     int new_path_size;
     if (path_size != 0)
         return path_size;
@@ -205,29 +201,26 @@ static int TryReadlink(const char *link, char *path, int path_size) {
     return new_path_size;
 }
 
-static void GetExecutablePathUnix(char *path) {
-    int path_size = 0;
-#ifdef __linux__
-    path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
-#elif defined(__NetBSD__)
-    path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
-#elif defined(__sun)
-    path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
-#else
-    path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
-    // Try others
-    path_size = TryReadlink("/proc/self/exe", path, path_size);
-    path_size = TryReadlink("/proc/curproc/exe", path, path_size);
-    path_size = TryReadlink("/proc/self/path/a.out", path, path_size);
-#endif
-    path[path_size] = 0;
-}
-
-char *envuGetExecutablePath() {
-    // try readlink
+static inline char *getExecutablePathProcfs() {
+    // get an executable path with readlink()
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
-    GetExecutablePathUnix(path);
+    int path_size = 0;
+#ifdef __linux__
+    path_size = tryReadlink("/proc/self/exe", path, path_size);  // Linux
+#elif defined(__NetBSD__)
+    path_size = tryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
+#elif defined(__sun)
+    path_size = tryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
+#else
+    path_size = tryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+    // Try others
+    path_size = tryReadlink("/proc/self/exe", path, path_size);
+    path_size = tryReadlink("/proc/curproc/exe", path, path_size);
+    path_size = tryReadlink("/proc/self/path/a.out", path, path_size);
+#endif
+    path[path_size] = 0;
+
     if (*path != '\0') {
 #ifdef __NetBSD__
         // procfs does not resolve paths on NetBSD.
@@ -241,6 +234,20 @@ char *envuGetExecutablePath() {
     return NULL;
 }
 #endif
+
+char *envuGetExecutablePath() {
+#ifdef __APPLE__
+    return getExecutablePathApple();
+#elif defined(__FreeBSD__)
+    return getExecutablePathFreeBSD();
+#elif defined(__OpenBSD__)
+    return getExecutablePathOpenBSD();
+#elif defined(__HAIKU__)
+    return getExecutablePathHaiku();
+#else
+    return getExecutablePathProcfs();
+#endif
+}
 
 int envuFileExists(const char *path) {
     struct stat buffer;
@@ -489,7 +496,7 @@ static char *CFStoChar(CFStringRef cfstr) {
     return NULL;
 }
 
-static char *ParseReleaseMac() {
+static inline char *getOSProductNameApple() {
     // Get ProductName and ProductVersion
     // from /System/Library/CoreServices/*Version.plist
 
@@ -532,7 +539,7 @@ static char *ParseReleaseMac() {
     return cstr;
 }
 #elif defined(__linux__)
-static char *ParseReleaseLinux() {
+static inline char *getOSProductNameLinux() {
     // Get the value of "PRETTY_NAME" in /etc/os-release
     FILE *fptr;
     fptr = fopen("/etc/os-release", "r");
@@ -578,7 +585,7 @@ static char *ParseReleaseLinux() {
     return pretty_name;
 }
 #elif defined(__sun)
-static char *ParseReleaseSolaris() {
+static inline char *getOSProductNameSolaris() {
     // Get the first alphanumeric part in /etc/release
     FILE *fptr;
     fptr = fopen("/etc/release", "r");
@@ -616,19 +623,8 @@ static char *ParseReleaseSolaris() {
     free(lineptr);
     return pretty_name;
 }
-#endif
-
-char *envuGetOSProductName() {
-#ifdef __APPLE__
-    // parse /System/Library/CoreServices/SystemVersion.plist on mac
-    return ParseReleaseMac();
-#elif defined(__linux__)
-    // parse /etc/os-release on Linux
-    return ParseReleaseLinux();
-#elif defined(__sun)
-    // parse /etc/os-release on Solaris
-    return ParseReleaseSolaris();
 #else
+static inline char *getOSProductNameOthers() {
     // concat envuGetOS and envuGetOSVersion on other platforms.
     char *os = envuGetOS();
     if (os == NULL)
@@ -650,6 +646,18 @@ char *envuGetOSProductName() {
     envuFree(os_ver);
     envuFree(tmp);
     return ret;
+}
+#endif
+
+char *envuGetOSProductName() {
+#ifdef __APPLE__
+    return getOSProductNameApple();
+#elif defined(__linux__)
+    return getOSProductNameLinux();
+#elif defined(__sun)
+    return getOSProductNameSolaris();
+#else
+    return getOSProductNameOthers();
 #endif
 }
 
