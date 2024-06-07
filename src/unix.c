@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/dyld.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
 // for GetExecutablePath()
@@ -67,17 +68,27 @@ static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
     return str;
 }
 
+static char *envuGetRealPath(const char *path) {
+    char str[PATH_MAX + 1];
+    str[PATH_MAX] = '\0';
+    char *resolved = realpath(path, str);
+    return AllocStrWithConst(resolved);
+}
+
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
 char *envuGetExecutablePath() {
     char path[PATH_MAX + 1];
-    path[0] = 0;
-    path[PATH_MAX] = 0;
+    path[PATH_MAX] = '\0';
     uint32_t bufsize = PATH_MAX;
     int ret = _NSGetExecutablePath(path, &bufsize);
-    if (ret || bufsize == 0 || *path == '\0')
+    if (ret || bufsize == 0 || *path == '\0') {
+        // Failed to get exe path.
         return NULL;
-    return AllocStrWithConst(path);
+    }
+
+    // resolve symlinks and dot segments
+    return envuGetRealPath(path);
 }
 #elif defined(__FreeBSD__)
 // FreeBSD requires sysctl to get the executable path.
@@ -129,16 +140,12 @@ char *envuGetExecutablePath() {
     if (argv0 == NULL)  // failed to get argv[0]
         return NULL;
 
-    // Assume argv[0] as an absolute path or a related path
-    char *fullpath = envuGetFullPath(argv0);
-    if (*argv0 == '/' || envuFileExists(fullpath)) {
-        envuFree(argv0);
-        return fullpath;
+    if (*argv0 == '/' || *argv0 == '.') {
+        // argv[0] is an absolute path or a related path
+        return envuGetRealPath(argv0);
     }
-    envuFree(fullpath);
 
     // Assume that argv[0] exists in one of environment paths
-    fullpath = NULL;
     int count = 0;
     char **paths = envuGetEnvPaths(&count);
     if (paths == NULL) {
@@ -151,7 +158,6 @@ char *envuGetExecutablePath() {
 
         // concat an environment path with argv[0]
         char *abs_path;
-        char *abs_path_full;
         if ((*p)[len - 1] == '/') {
             abs_path = AllocStrWithTwoConsts(*p, argv0);
         } else {
@@ -159,24 +165,21 @@ char *envuGetExecutablePath() {
             abs_path = AllocStrWithTwoConsts(path2, argv0);
             envuFree(path2);
         }
-        abs_path_full = envuGetFullPath(abs_path);
+
+        char *fullpath = envuGetRealPath(abs_path);
         envuFree(abs_path);
 
-        if (envuFileExists(abs_path_full)) {
-            // found the executable path
-            fullpath = abs_path_full;
-            break;
+        if (fullpath != NULL) {
+            // Found exe path
+            envuFreeEnvPaths(paths);
+            envuFree(argv0);
+            return fullpath;
         }
-        envuFree(abs_path_full);
     }
 
+    // Failed to get exe path
     envuFreeEnvPaths(paths);
     envuFree(argv0);
-
-    if (fullpath != NULL)
-        return fullpath;
-
-    // Failed to get exe path
     return NULL;
 }
 #elif defined(__HAIKU__)
@@ -204,10 +207,19 @@ static int TryReadlink(const char *link, char *path, int path_size) {
 
 static void GetExecutablePathUnix(char *path) {
     int path_size = 0;
+#ifdef __linux__
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
+#elif defined(__NetBSD__)
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
-    path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+#elif defined(__sun)
     path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
+#else
+    path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+    // Try others
+    path_size = TryReadlink("/proc/self/exe", path, path_size);
+    path_size = TryReadlink("/proc/curproc/exe", path, path_size);
+    path_size = TryReadlink("/proc/self/path/a.out", path, path_size);
+#endif
     path[path_size] = 0;
 }
 
@@ -218,10 +230,9 @@ char *envuGetExecutablePath() {
     GetExecutablePathUnix(path);
     if (*path != '\0') {
 #ifdef __NetBSD__
-        // procfs does not remove dot segments from paths on NetBSD.
-        // So, we need to remove them by ourselves.
-        // TODO: use realpath() to resolve symlinks.
-        return envuGetFullPath(path);
+        // procfs does not resolve paths on NetBSD.
+        // So, we need to do it by ourselves.
+        return envuGetRealPath(path);
 #else
         return AllocStrWithConst(path);
 #endif
@@ -459,22 +470,61 @@ char *envuGetOSVersion() {
 }
 
 #ifdef __APPLE__
-static char *ParseReleaseMac() {
-    // TODO: implement this function.
+CFDictionaryRef _CFCopyServerVersionDictionary();
+CFDictionaryRef _CFCopySystemVersionDictionary();
+
+static char *CFStoChar(CFStringRef cfstr) {
+    // Note: The lenght of string should be smaller than 256.
+    char str[256];
+    int ret = CFStringGetCString(cfstr, str, sizeof(str), kCFStringEncodingUTF8);
+    if (ret) {
+        str[255] = '\0';
+        return AllocStrWithConst(str);
+    }
     return NULL;
+}
 
+static char *ParseReleaseMac() {
     // Get ProductName and ProductVersion
-    // from /System/Library/CoreServices/SystemVersion.plist
+    // from /System/Library/CoreServices/*Version.plist
 
-    /*
-    char *prod_name = NULL;
-    char *prod_ver = NULL;
-    char *tmp = AllocStrWithTwoConsts(prod_name, " ");
-    char *ret = AllocStrWithTwoConsts(tmp, prod_ver);
-    envuFree(prod_name);
-    envuFree(prod_ver);
-    envuFree(tmp);
-    */
+    CFDictionaryRef dict= NULL;
+	CFStringRef prod_name = NULL;
+	CFStringRef prod_ver = NULL;
+
+    // Try ServerVersion.plist
+	dict = _CFCopyServerVersionDictionary();
+	if (dict == NULL) {
+        // Try SystemVersion.plist
+		dict = _CFCopySystemVersionDictionary();
+    }
+	if (dict == NULL)
+        return NULL;  // Failed to get *.plist
+
+	prod_name = CFDictionaryGetValue(dict, CFSTR("ProductName"));
+    if (prod_name == NULL)
+        return NULL;
+
+	prod_ver = CFDictionaryGetValue(dict, CFSTR("ProductVersion"));
+    if (prod_ver == NULL) {
+        // Return prod_name
+        char *cstr = CFStoChar(prod_name);
+        CFRelease(prod_name);
+        return cstr;
+    }
+
+    // Concat prod_name and prod_ver
+    CFStringRef str = NULL;
+    str = CFStringCreateWithFormat(
+            NULL, NULL, CFSTR("%@ %@"), prod_name, prod_ver);
+    CFRelease(prod_name);
+    CFRelease(prod_ver);
+    if (str == NULL)
+        return NULL;
+
+    char *cstr = CFStoChar(str);
+    CFRelease(str);
+    return cstr;
 }
 #elif defined(__linux__)
 static char *ParseReleaseLinux() {
@@ -518,13 +568,13 @@ static char *ParseReleaseLinux() {
         pretty_name = AllocStrWithConst(lp);
         break;
     }
+    fclose(fptr);
     free(lineptr);
     return pretty_name;
 }
 #elif defined(__sun)
 static char *ParseReleaseSolaris() {
     // Get the first alphanumeric part in /etc/release
-
     FILE *fptr;
     fptr = fopen("/etc/release", "r");
     if (!fptr)
@@ -535,9 +585,10 @@ static char *ParseReleaseSolaris() {
     ssize_t size = 0;
     size = getline(&lineptr, &linemax, fptr);
     lineptr[size - 1] = '\0';
-    char *start_p = lineptr;
+    fclose(fptr);
 
     // skip white spaces
+    char *start_p = lineptr;
     while (*start_p == ' ' && *start_p != '\0') {
         start_p++;
     }

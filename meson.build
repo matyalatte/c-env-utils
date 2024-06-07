@@ -22,7 +22,7 @@ envu_is_release = get_option('buildtype').startswith('release') or (get_option('
 
 # Requires cpp on Windows and Haiku
 if envu_OS == 'windows' or envu_OS == 'haiku'
-    add_languages('cpp', required: true)
+    add_languages('cpp', native: false, required: true)
 endif
 
 # set compiler and linker options
@@ -72,8 +72,13 @@ if envu_OS == 'windows'
                 required: true),
         ]
     endforeach
-endif
-if envu_OS == 'haiku'
+elif envu_OS == 'darwin'
+    envu_lib_deps += [
+        dependency('appleframeworks',
+            modules : 'CoreFoundation',
+            required: true),
+    ]
+elif envu_OS == 'haiku'
     envu_lib_deps += [
         meson.get_compiler('c').find_library('be',
             required: true),
@@ -95,7 +100,7 @@ if envu_OS == 'windows'
     install_headers('include/env_utils_windows.h')
 endif
 
-# dependency for other binaries
+# dependency for other projects
 env_utils_dep = declare_dependency(
     include_directories: include_directories('./include'),
     dependencies: envu_lib_deps,
@@ -113,7 +118,7 @@ endif
 
 # Build unit tests
 if get_option('tests')
-    add_languages('cpp', required: true)
+    add_languages('cpp', native:false, required: true)
 
     # get gtest
     gtest_proj = subproject('gtest')

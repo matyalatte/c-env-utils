@@ -122,6 +122,7 @@ int envuFileExists(const char *path) {
 }
 
 char *envuGetFullPath(const char *path) {
+    // TODO: https://learn.microsoft.com/ja-jp/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew
     if (path == NULL)
         return NULL;
     if (path[0] == '\0')
