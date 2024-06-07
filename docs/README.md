@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-c-env-utils is a cross-platform C library to get environment information such as user name, working directory, and executable path.
+c-env-utils is a cross-platform C library to get environment information such as executable path, user name, and OS version.
 
 ## Documentation
 
@@ -46,6 +46,11 @@ int main(void) {
     char *username = envuGetUsername();
     printf("User: %s\n", username);
     envuFree(username);
+
+    // OS
+    char *prodname = envuGetOSProductName();
+    printf("OS: %s\n", prodname);
+    envuFree(prodname);
 
     // Parse the PATH variable
     int count;

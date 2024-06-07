@@ -18,8 +18,8 @@ extern "C" {
 #define _ENVU_ENUM(s) typedef unsigned int s; enum
 
 // Version info
-#define ENVU_VERSION "0.2.0"
-#define ENVU_VERSION_INT 200
+#define ENVU_VERSION "0.3.0"
+#define ENVU_VERSION_INT 300
 
 /**
  * Gets the version of c-env-utils.
@@ -55,7 +55,7 @@ _ENVU_EXTERN void envuFree(void *p);
 _ENVU_EXTERN char *envuGetExecutablePath();
 
 /**
- * Returns if the specified path is a file for not.
+ * Returns if the specified path is a regular file for not.
  *
  * @param path A path.
  * @returns If the specified path is a regular file or not.
@@ -63,7 +63,16 @@ _ENVU_EXTERN char *envuGetExecutablePath();
 _ENVU_EXTERN int envuFileExists(const char *path);
 
 /**
+ * Returns if the specified path exists for not.
+ *
+ * @param path A path.
+ * @returns If the specified path exists or not.
+ */
+_ENVU_EXTERN int envuPathExists(const char *path);
+
+/**
  * Gets a full path of the specified path.
+ * It resolves dot segments but ignores symlinks and the PATH variable.
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
@@ -71,6 +80,20 @@ _ENVU_EXTERN int envuFileExists(const char *path);
  * @returns A full path of the specified path. Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetFullPath(const char *path);
+
+/**
+ * Gets a real path of the specified path.
+ * It can resolve symlinks and refer the PATH variables.
+ * But it fails if the specified path does not exist.
+ *
+ * @warning This function can NOT resolve symlinks on Windows.
+ *
+ * @note Strings that are returned from this method should be freed with envuFree().
+ *
+ * @param path A path.
+ * @returns A real path of the specified path. Or a null pointer if failed.
+ */
+_ENVU_EXTERN char *envuGetRealPath(const char *path);
 
 /**
  * Gets a parent directory of the specified path.
@@ -150,12 +173,41 @@ _ENVU_EXTERN char *envuGetUsername();
 /**
  * Gets the name of running OS.
  * e.g. "Windows" for Windows, "Darwin" for macOS, and "Linux" for Linux distros.
+ * You can see more examples [here](md_docs__return_values.html).
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
- * @returns A string that represents running OS. Or a null pointer if failed.
+ * @returns A string that represents running OS.
+ *          Or a null pointer if failed.
  */
 _ENVU_EXTERN char *envuGetOS();
+
+/**
+ * Gets the version of running OS.
+ * You can see examples of return values [here](md_docs__return_values.html).
+ *
+ * @note Strings that are returned from this method should be freed with envuFree().
+ *
+ * @returns A string that represents the version of running OS.
+ *          Or a null pointer if failed.
+ */
+_ENVU_EXTERN char *envuGetOSVersion();
+
+/**
+ * Gets the product name and its version of running OS.
+ * e.g. "Microsoft Windows 10 Home", "Mac OS X 10.15.5", and "Ubuntu 20.04 LTS".
+ * You can see more examples [here](md_docs__return_values.html).
+ *
+ * @warning Note that the return value can be disguised by users.
+ *          Your program may execute unexpected codes
+ *          if you use conditional branching by the return value.
+ *
+ * @note Strings that are returned from this method should be freed with envuFree().
+ *
+ * @returns A string that represents the product name and its version of running OS.
+ *          Or a null pointer if failed.
+ */
+_ENVU_EXTERN char *envuGetOSProductName();
 
 /**
  * Gets the environment paths from the PATH variable.

@@ -58,6 +58,14 @@ int main(void) {
     PRINTF("OS: %s\n", os);
     envuFree(os);
 
+    char *os_ver = envuGetOSVersion();
+    PRINTF("OS version: %s\n", os_ver);
+    envuFree(os_ver);
+
+    char *os_pn = envuGetOSProductName();
+    PRINTF("OS porduct name: %s\n", os_pn);
+    envuFree(os_pn);
+
     int count;
     char **paths = envuGetEnvPaths(&count);
     PRINTF("%s", "PATH:\n");

@@ -9,9 +9,11 @@
 #include "env_utils_priv.h"
 
 #ifndef MAX_PATH
+#warning("Warning: Failed to get MAX_PATH. The compiler uses 260 for it.")
 #define MAX_PATH  260
 #endif
 #ifndef UNLEN
+#warning("Warning: Failed to get UNLEN. The compiler uses 256 for it.")
 #define UNLEN 256
 #endif
 
@@ -20,13 +22,22 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define SIZET_TO_INT(N) (int)MIN(N, INT_MAX)
 
-static wchar_t *AllocWstr(size_t size) {
+wchar_t *AllocWstr(size_t size) {
     wchar_t *wstr;
     wstr = (wchar_t *)calloc(size + 1, sizeof(wchar_t));
     return wstr;
 }
 
-#define AllocEmptyWstr() AllocWstr(0)
+wchar_t *AllocWstrWithConst(const wchar_t *c) {
+    if (c == NULL)
+        return NULL;
+    size_t str_len = wcslen(c);
+    wchar_t *wstr = AllocWstr(str_len);
+    if (wstr == NULL)
+        return NULL;
+    memcpy_s(wstr, str_len * sizeof(wchar_t), c, str_len * sizeof(wchar_t));
+    return wstr;
+}
 
 wchar_t *envuUTF8toUTF16(const char* str) {
     if (str == NULL)
@@ -103,11 +114,29 @@ char *envuGetExecutablePath() {
     return envuUTF16toUTF8(filename);
 }
 
-int envuFileExists(const char *path) {
+static inline DWORD getFileAttributes(const char *path) {
     wchar_t *wpath = envuUTF8toUTF16(path);
     DWORD ret = GetFileAttributesW(wpath);
     envuFree(wpath);
+    return ret;
+}
+
+int envuFileExists(const char *path) {
+    DWORD ret = getFileAttributes(path);
     return (ret != INVALID_FILE_ATTRIBUTES) && ((ret & FILE_ATTRIBUTE_DIRECTORY) == 0);
+}
+
+int envuPathExists(const char *path) {
+    DWORD ret = getFileAttributes(path);
+    return ret != INVALID_FILE_ATTRIBUTES;
+}
+
+char *envuGetRealPath(const char *path) {
+    // TODO: Search the PATH variables, and resolve symlinks.
+    char *fullpath = envuGetFullPath(path);
+    if (fullpath == NULL || !envuPathExists(fullpath))
+        return NULL;
+    return fullpath;
 }
 
 char *envuGetFullPath(const char *path) {
@@ -151,6 +180,7 @@ char *envuGetDirectory(const char *path) {
 
     char *copied_path = AllocStrWithConst(path);
 
+    // TODO: read the path backwards.
     char *p = copied_path;
     char *slash_p[3] = { NULL, NULL, NULL };
     while (*p != '\0') {
@@ -255,7 +285,7 @@ char *envuGetHome() {
     // Check HOMEDRIVE and HOMEPATH
     char *drive = envuGetEnv("HOMEDRIVE");  // "C:"
     char *path = envuGetEnv("HOMEPATH");  // "\Users\name"
-    if (drive == NULL) {
+    if (drive == NULL || drive[strlen(drive) - 1] != ':') {
         envuFree(drive);
         envuFree(path);
         return NULL;
@@ -290,6 +320,16 @@ char *envuGetUsername() {
 
 char *envuGetOS() {
     return AllocStrWithConst("Windows");
+}
+
+char *envuGetOSVersion() {
+    wchar_t *wstr = getOSInfoFromWMI(L"Version");
+    return envuUTF16toUTF8(wstr);
+}
+
+char *envuGetOSProductName() {
+    wchar_t *wstr = getOSInfoFromWMI(L"Caption");
+    return envuUTF16toUTF8(wstr);
 }
 
 char **envuParseEnvPaths(const char *env_path, int *path_count) {

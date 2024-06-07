@@ -27,7 +27,7 @@ TEST(PathTest, envuFileExists) {
 TEST(PathTest, envuGetFullPathAbsolute) {
     std::vector<std::pair<const char*, const char*>> cases = {
 #ifdef _WIN32
-        // Note: WIN_DRIVE ":\\" == "C:\\" on C drive.
+        // Note: (WIN_DRIVE ":\\") == ("C:\\" on C drive).
         { WIN_DRIVE ":\\usr\\lib", WIN_DRIVE ":\\usr\\lib" },
         { WIN_DRIVE ":\\usr\\lib\\", WIN_DRIVE ":\\usr\\lib" },
         { WIN_DRIVE ":\\usr\\lib\\.", WIN_DRIVE ":\\usr\\lib" },

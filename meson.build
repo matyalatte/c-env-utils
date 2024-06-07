@@ -12,13 +12,18 @@ project('c-env-utils', ['c'],
         'cpp_eh=sc',                    # shut the compiler up in some cases
         'cpp_winlibs=',                 # likewise as with c_winlibs
     ],
-    version: '0.2.0')
+    version: '0.3.0')
 
 envu_link_args = []
 envu_c_args = []
 envu_OS = host_machine.system()
 envu_compiler = meson.get_compiler('c').get_id()
 envu_is_release = get_option('buildtype').startswith('release') or (get_option('buildtype').startswith('custom') and not get_option('debug'))
+
+# Requires cpp on Windows and Haiku
+if envu_OS == 'windows' or envu_OS == 'haiku'
+    add_languages('cpp', native: false, required: true)
+endif
 
 # set compiler and linker options
 if envu_OS == 'darwin' and not meson.is_subproject()
@@ -40,38 +45,50 @@ if envu_OS == 'darwin' and not meson.is_subproject()
     else
         warning('Universal build is disabled since your SDKs do not support it.')
     endif
-elif envu_OS == 'haiku'
-    envu_link_args += ['-lbe']
 endif
 
-if envu_compiler != 'msvc'
-    # Some platforms (e.g. FreeBSD) seem to use '-Wstrict-prototypes' as default
-    envu_c_args += ['-Wno-strict-prototypes']
+if envu_OS == 'freebsd'
+    # Ignore some warnings on FreeBSD
+    envu_c_args += ['-Wno-strict-prototypes', '-Wno-c11-extensions']
 endif
 
 # set source files
 envu_sources = ['src/common.c']
 if envu_OS == 'windows'
-    envu_sources += ['src/windows.c']
+    envu_sources += ['src/windows.c', 'src/wmi.cpp']
 else
     envu_sources += ['src/unix.c']
 endif
+if envu_OS == 'haiku'
+    envu_sources += ['src/haiku.cpp']
+endif
 
-# set winapi libraries
-win_lib_deps = []
+# set dynamic linked libraries
+envu_lib_deps = []
 if envu_OS == 'windows'
-    foreach lib : ['kernel32', 'advapi32']
-        win_lib_deps += [
+    foreach lib : ['kernel32', 'advapi32', 'ole32', 'oleaut32', 'wbemuuid']
+        envu_lib_deps += [
             meson.get_compiler('c').find_library(lib,
                 required: true),
         ]
     endforeach
+elif envu_OS == 'darwin'
+    envu_lib_deps += [
+        dependency('appleframeworks',
+            modules : 'CoreFoundation',
+            required: true),
+    ]
+elif envu_OS == 'haiku'
+    envu_lib_deps += [
+        meson.get_compiler('c').find_library('be',
+            required: true),
+    ]
 endif
 
 # main binary
 env_utils = library('env_utils',
     envu_sources,
-    dependencies: win_lib_deps,
+    dependencies: envu_lib_deps,
     c_args: envu_c_args,
     cpp_args: envu_c_args,
     link_args: envu_link_args,
@@ -83,9 +100,10 @@ if envu_OS == 'windows'
     install_headers('include/env_utils_windows.h')
 endif
 
-# dependency for other binaries
+# dependency for other projects
 env_utils_dep = declare_dependency(
     include_directories: include_directories('./include'),
+    dependencies: envu_lib_deps,
     link_with : env_utils)
 
 if get_option('cli')
@@ -100,7 +118,7 @@ endif
 
 # Build unit tests
 if get_option('tests')
-    add_languages('cpp', required: true)
+    add_languages('cpp', native:false, required: true)
 
     # get gtest
     gtest_proj = subproject('gtest')

@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
 #ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/dyld.h>
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
 // for GetExecutablePath()
@@ -18,18 +19,24 @@
 #include <limits.h>
 #include <libgen.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "env_utils.h"
 #include "env_utils_priv.h"
 
 #ifdef __sun
-// Solaris use MAXPATHLEN instead of PATH_MAX
+// Solaris uses MAXPATHLEN instead of PATH_MAX
 #include <sys/param.h>
 #define PATH_MAX MAXPATHLEN
+// _GNU_SOURCE does not seem to work fine on Solaris.
+// So, we declare some functions here.
+int setenv(const char *envname, const char *envval, int overwrite);
+int unsetenv(const char *name);
+ssize_t getline(char **lineptr, size_t *n, FILE *stream);
 #endif
 
 #ifndef PATH_MAX
-#warning ("Warning: Failed to get PATH_MAX. Use 512 for it.")
+#warning("Warning: Failed to get PATH_MAX. The compiler uses 512 for it.")
 #define PATH_MAX  512
 #endif
 
@@ -61,17 +68,27 @@ static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
     return str;
 }
 
+char *envuGetRealPath(const char *path) {
+    char str[PATH_MAX + 1];
+    str[PATH_MAX] = '\0';
+    char *resolved = realpath(path, str);
+    return AllocStrWithConst(resolved);
+}
+
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
 char *envuGetExecutablePath() {
     char path[PATH_MAX + 1];
-    path[0] = 0;
-    path[PATH_MAX] = 0;
+    path[PATH_MAX] = '\0';
     uint32_t bufsize = PATH_MAX;
     int ret = _NSGetExecutablePath(path, &bufsize);
-    if (ret || bufsize == 0 || *path == '\0')
+    if (ret || bufsize == 0 || *path == '\0') {
+        // Failed to get exe path.
         return NULL;
-    return AllocStrWithConst(path);
+    }
+
+    // resolve symlinks and dot segments
+    return envuGetRealPath(path);
 }
 #elif defined(__FreeBSD__)
 // FreeBSD requires sysctl to get the executable path.
@@ -123,16 +140,12 @@ char *envuGetExecutablePath() {
     if (argv0 == NULL)  // failed to get argv[0]
         return NULL;
 
-    // Assume argv[0] as an absolute path or a related path
-    char *fullpath = envuGetFullPath(argv0);
-    if (*argv0 == '/' || envuFileExists(fullpath)) {
-        envuFree(argv0);
-        return fullpath;
+    if (*argv0 == '/' || *argv0 == '.') {
+        // argv[0] is an absolute path or a related path
+        return envuGetRealPath(argv0);
     }
-    envuFree(fullpath);
 
     // Assume that argv[0] exists in one of environment paths
-    fullpath = NULL;
     int count = 0;
     char **paths = envuGetEnvPaths(&count);
     if (paths == NULL) {
@@ -145,7 +158,6 @@ char *envuGetExecutablePath() {
 
         // concat an environment path with argv[0]
         char *abs_path;
-        char *abs_path_full;
         if ((*p)[len - 1] == '/') {
             abs_path = AllocStrWithTwoConsts(*p, argv0);
         } else {
@@ -153,24 +165,21 @@ char *envuGetExecutablePath() {
             abs_path = AllocStrWithTwoConsts(path2, argv0);
             envuFree(path2);
         }
-        abs_path_full = envuGetFullPath(abs_path);
+
+        char *fullpath = envuGetRealPath(abs_path);
         envuFree(abs_path);
 
-        if (envuFileExists(abs_path_full)) {
-            // found the executable path
-            fullpath = abs_path_full;
-            break;
+        if (fullpath != NULL) {
+            // Found exe path
+            envuFreeEnvPaths(paths);
+            envuFree(argv0);
+            return fullpath;
         }
-        envuFree(abs_path_full);
     }
 
+    // Failed to get exe path
     envuFreeEnvPaths(paths);
     envuFree(argv0);
-
-    if (fullpath != NULL)
-        return fullpath;
-
-    // Failed to get exe path
     return NULL;
 }
 #elif defined(__HAIKU__)
@@ -198,10 +207,19 @@ static int TryReadlink(const char *link, char *path, int path_size) {
 
 static void GetExecutablePathUnix(char *path) {
     int path_size = 0;
+#ifdef __linux__
     path_size = TryReadlink("/proc/self/exe", path, path_size);  // Linux
+#elif defined(__NetBSD__)
     path_size = TryReadlink("/proc/curproc/exe", path, path_size);  // NetBSD
-    path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+#elif defined(__sun)
     path_size = TryReadlink("/proc/self/path/a.out", path, path_size);  // Solaris
+#else
+    path_size = TryReadlink("/proc/curproc/file", path, path_size);  // Other BSD variants?
+    // Try others
+    path_size = TryReadlink("/proc/self/exe", path, path_size);
+    path_size = TryReadlink("/proc/curproc/exe", path, path_size);
+    path_size = TryReadlink("/proc/self/path/a.out", path, path_size);
+#endif
     path[path_size] = 0;
 }
 
@@ -212,9 +230,9 @@ char *envuGetExecutablePath() {
     GetExecutablePathUnix(path);
     if (*path != '\0') {
 #ifdef __NetBSD__
-        // procfs does not remove dot segments from paths on NetBSD.
-        // So, we need to remove them by ourselves.
-        return envuGetFullPath(path);
+        // procfs does not resolve paths on NetBSD.
+        // So, we need to do it by ourselves.
+        return envuGetRealPath(path);
 #else
         return AllocStrWithConst(path);
 #endif
@@ -229,8 +247,12 @@ int envuFileExists(const char *path) {
     return (stat(path, &buffer) == 0) && S_ISREG(buffer.st_mode);
 }
 
+int envuPathExists(const char *path) {
+    struct stat buffer;
+    return stat(path, &buffer) == 0;
+}
+
 // TODO: Clean this dirty code up
-// TODO: This does not resolve symlinks!
 char *envuGetFullPath(const char *path) {
     if (path == NULL)
         return NULL;
@@ -426,6 +448,209 @@ char *envuGetOS() {
         return NULL;
     }
     return AllocStrWithConst(buf.sysname);
+}
+
+char *envuGetOSVersion() {
+    struct utsname buf = { 0 };
+    // Note: uname(&buf) can be positive on Solaris
+    if (uname(&buf) == -1) {
+        return NULL;
+    }
+    char *ver = buf.release;
+    if (ver == NULL || *ver == '\0')
+        return NULL;
+
+    // buf.release could be of the form x.y.z-*
+    // We try to make it numeric (x.y.z) here.
+    char *vp = ver;
+    while (is_numeric(*vp)) {
+        vp++;
+    }
+    if (vp != ver && *vp == '-') {
+        // replace the first '-' with a null terminator.
+        *vp = '\0';
+    }
+
+    return AllocStrWithConst(ver);
+}
+
+#ifdef __APPLE__
+CFDictionaryRef _CFCopyServerVersionDictionary();
+CFDictionaryRef _CFCopySystemVersionDictionary();
+
+static char *CFStoChar(CFStringRef cfstr) {
+    // Note: The length of string should be smaller than 256.
+    char str[256];
+    int ret = CFStringGetCString(cfstr, str, sizeof(str), kCFStringEncodingUTF8);
+    if (ret) {
+        str[255] = '\0';
+        return AllocStrWithConst(str);
+    }
+    return NULL;
+}
+
+static char *ParseReleaseMac() {
+    // Get ProductName and ProductVersion
+    // from /System/Library/CoreServices/*Version.plist
+
+    CFDictionaryRef dict = NULL;
+    CFStringRef prod_name = NULL;
+    CFStringRef prod_ver = NULL;
+
+    // Try ServerVersion.plist
+    dict = _CFCopyServerVersionDictionary();
+    if (dict == NULL) {
+        // Try SystemVersion.plist
+        dict = _CFCopySystemVersionDictionary();
+    }
+    if (dict == NULL)
+        return NULL;  // Failed to get *.plist
+
+    prod_name = CFDictionaryGetValue(dict, CFSTR("ProductName"));
+    if (prod_name == NULL)
+        return NULL;
+
+    prod_ver = CFDictionaryGetValue(dict, CFSTR("ProductVersion"));
+    if (prod_ver == NULL) {
+        // Return prod_name
+        char *cstr = CFStoChar(prod_name);
+        CFRelease(prod_name);
+        return cstr;
+    }
+
+    // Concat prod_name and prod_ver
+    CFStringRef str = NULL;
+    str = CFStringCreateWithFormat(
+            NULL, NULL, CFSTR("%@ %@"), prod_name, prod_ver);
+    CFRelease(prod_name);
+    CFRelease(prod_ver);
+    if (str == NULL)
+        return NULL;
+
+    char *cstr = CFStoChar(str);
+    CFRelease(str);
+    return cstr;
+}
+#elif defined(__linux__)
+static char *ParseReleaseLinux() {
+    // Get the value of "PRETTY_NAME" in /etc/os-release
+    FILE *fptr;
+    fptr = fopen("/etc/os-release", "r");
+    if (!fptr)
+        return NULL;
+
+    char *lineptr = NULL;
+    size_t linemax = 0;
+    ssize_t size = 0;
+    const char key[] = "PRETTY_NAME";
+    char *pretty_name = NULL;
+    while (1) {
+        // get a line.
+        size = getline(&lineptr, &linemax, fptr);
+        if (size < 0)
+            break;
+        lineptr[size - 1] = '\0';
+
+        // check if a key is "PRETTY_NAME"
+        const char *lp = lineptr;
+        const char *kp = key;
+        while (*kp != '\0' && *lp != '\0' && *lp != '=' && *kp == *lp) {
+            lp++;
+            kp++;
+        }
+        if (*kp != '\0' || *lp != '=') {
+            // The key is not "PRETTY_NAME"
+            continue;
+        }
+        lp++;
+
+        // remove quotes if exist
+        if (*lp == '"')
+            lp++;
+        if (lineptr[size - 2] == '"')
+            lineptr[size - 2] = '\0';
+
+        pretty_name = AllocStrWithConst(lp);
+        break;
+    }
+    fclose(fptr);
+    free(lineptr);
+    return pretty_name;
+}
+#elif defined(__sun)
+static char *ParseReleaseSolaris() {
+    // Get the first alphanumeric part in /etc/release
+    FILE *fptr;
+    fptr = fopen("/etc/release", "r");
+    if (!fptr)
+        return NULL;
+
+    char *lineptr = NULL;
+    size_t linemax = 0;
+    ssize_t size = 0;
+    size = getline(&lineptr, &linemax, fptr);
+    lineptr[size - 1] = '\0';
+    fclose(fptr);
+
+    // skip white spaces
+    char *start_p = lineptr;
+    while (*start_p == ' ' && *start_p != '\0') {
+        start_p++;
+    }
+    if (*start_p == '\0') {
+        free(lineptr);
+        return NULL;
+    }
+
+    // cut non-alphanumeric part off.
+    char *end_p = start_p;
+    while (*end_p != '\0' && (is_alphabet(*end_p) || is_numeric(*end_p) || *end_p == ' ')) {
+        end_p++;
+    }
+    if (*end_p != *start_p && *(end_p - 1) == ' ') {
+        end_p--;
+    }
+    *end_p = '\0';
+
+    char *pretty_name = AllocStrWithConst(start_p);
+    free(lineptr);
+    return pretty_name;
+}
+#endif
+
+char *envuGetOSProductName() {
+#ifdef __APPLE__
+    // parse /System/Library/CoreServices/SystemVersion.plist on mac
+    return ParseReleaseMac();
+#elif defined(__linux__)
+    // parse /etc/os-release on Linux
+    return ParseReleaseLinux();
+#elif defined(__sun)
+    // parse /etc/os-release on Solaris
+    return ParseReleaseSolaris();
+#else
+    // concat envuGetOS and envuGetOSVersion on other platforms.
+    char *os = envuGetOS();
+    if (os == NULL)
+        return NULL;
+
+#ifdef __HAIKU__
+    // Haiku requires native APIs to get the true version string.
+    // https://discuss.haiku-os.org/t/getting-the-haiku-version/13899
+    char *os_ver = getOSVersionHaiku();
+#else
+    char *os_ver = envuGetOSVersion();
+#endif
+    if (os_ver == NULL)
+        return os;
+
+    char *tmp = AllocStrWithTwoConsts(os, " ");
+    char *ret = AllocStrWithTwoConsts(tmp, os_ver);
+    envuFree(os);
+    envuFree(os_ver);
+    envuFree(tmp);
+    return ret;
+#endif
 }
 
 char **envuParseEnvPaths(const char *env_path, int *path_count) {

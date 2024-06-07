@@ -24,3 +24,6 @@ docs/latex
 # coverage report
 coverage-report
 *.log
+
+# vscode
+.vscode
