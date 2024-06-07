@@ -927,6 +927,7 @@ WARN_LOGFILE           =
 INPUT                  = ./include/env_utils.h \
                          ./include/env_utils_windows.h \
                          ./docs/README.md \
+                         ./docs/ReturnValues.md \
                          ./docs/Doxygen.md
 
 # This tag can be used to specify the character encoding of the source files
