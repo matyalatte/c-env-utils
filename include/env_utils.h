@@ -55,12 +55,20 @@ _ENVU_EXTERN void envuFree(void *p);
 _ENVU_EXTERN char *envuGetExecutablePath();
 
 /**
- * Returns if the specified path is a file for not.
+ * Returns if the specified path is a regular file for not.
  *
  * @param path A path.
  * @returns If the specified path is a regular file or not.
  */
 _ENVU_EXTERN int envuFileExists(const char *path);
+
+/**
+ * Returns if the specified path exists for not.
+ *
+ * @param path A path.
+ * @returns If the specified path exists or not.
+ */
+_ENVU_EXTERN int envuPathExists(const char *path);
 
 /**
  * Gets a full path of the specified path.

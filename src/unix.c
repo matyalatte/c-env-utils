@@ -247,6 +247,11 @@ int envuFileExists(const char *path) {
     return (stat(path, &buffer) == 0) && S_ISREG(buffer.st_mode);
 }
 
+int envuPathExists(const char *path) {
+    struct stat buffer;
+    return stat(path, &buffer) == 0;
+}
+
 // TODO: Clean this dirty code up
 char *envuGetFullPath(const char *path) {
     if (path == NULL)

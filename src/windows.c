@@ -114,17 +114,27 @@ char *envuGetExecutablePath() {
     return envuUTF16toUTF8(filename);
 }
 
-int envuFileExists(const char *path) {
+static inline DWORD getFileAttributes(const char *path) {
     wchar_t *wpath = envuUTF8toUTF16(path);
     DWORD ret = GetFileAttributesW(wpath);
     envuFree(wpath);
+    return ret;
+}
+
+int envuFileExists(const char *path) {
+    DWORD ret = getFileAttributes(path);
     return (ret != INVALID_FILE_ATTRIBUTES) && ((ret & FILE_ATTRIBUTE_DIRECTORY) == 0);
+}
+
+int envuPathExists(const char *path) {
+    DWORD ret = getFileAttributes(path);
+    return ret != INVALID_FILE_ATTRIBUTES;
 }
 
 char *envuGetRealPath(const char *path) {
     // TODO: Search the PATH variables, and resolve symlinks.
     char *fullpath = envuGetFullPath(path);
-    if (fullpath == NULL || !envuFileExists(fullpath))
+    if (fullpath == NULL || !envuPathExists(fullpath))
         return NULL;
     return fullpath;
 }
