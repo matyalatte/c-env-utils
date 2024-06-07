@@ -15,7 +15,6 @@
 // https://learn.microsoft.com/en-us/windows/win32/wmisdk/example-creating-a-wmi-application
 wchar_t *getOSInfoFromWMI(const wchar_t *key) {
     HRESULT hres;
-    bool skip_co_uninitialize = false;
 
     // Initialize COM
     hres =  CoInitializeEx(0, COINIT_MULTITHREADED);
@@ -37,10 +36,10 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
         EOAC_NONE,                    // Additional capabilities
         NULL);
 
-    if (FAILED(hres)) {
+    // Note: We can still use COM when hres == RPC_E_TOO_LATE.
+    if (FAILED(hres) && hres != RPC_E_TOO_LATE) {
         // Failed to initialize security.
-        if (!skip_co_uninitialize)
-            CoUninitialize();
+        CoUninitialize();
         return NULL;
     }
 
@@ -55,8 +54,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
 
     if (FAILED(hres)) {
         // Failed to create IWbemLocator object.
-        if (!skip_co_uninitialize)
-            CoUninitialize();
+        CoUninitialize();
         return NULL;
     }
 
@@ -82,8 +80,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
     if (FAILED(hres)) {
         // Failed to connect.
         pLoc->Release();
-        if (!skip_co_uninitialize)
-            CoUninitialize();
+        CoUninitialize();
         return NULL;
     }
 
@@ -102,8 +99,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
         // Failed to set proxy blanket.
         pSvc->Release();
         pLoc->Release();
-        if (!skip_co_uninitialize)
-            CoUninitialize();
+        CoUninitialize();
         return NULL;
     }
 
@@ -124,8 +120,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
         // Query for operating system failed.
         pSvc->Release();
         pLoc->Release();
-        if (!skip_co_uninitialize)
-            CoUninitialize();
+        CoUninitialize();
         return NULL;
     }
 
@@ -155,8 +150,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
     pSvc->Release();
     pLoc->Release();
     pEnumerator->Release();
-    if (!skip_co_uninitialize)
-        CoUninitialize();
+    CoUninitialize();
 
     return value;
 }
