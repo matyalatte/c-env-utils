@@ -12,7 +12,7 @@ project('c-env-utils', ['c'],
         'cpp_eh=sc',                    # shut the compiler up in some cases
         'cpp_winlibs=',                 # likewise as with c_winlibs
     ],
-    version: '0.2.0')
+    version: '0.3.0')
 
 envu_link_args = []
 envu_c_args = []

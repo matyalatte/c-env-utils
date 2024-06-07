@@ -18,8 +18,8 @@ extern "C" {
 #define _ENVU_ENUM(s) typedef unsigned int s; enum
 
 // Version info
-#define ENVU_VERSION "0.2.0"
-#define ENVU_VERSION_INT 200
+#define ENVU_VERSION "0.3.0"
+#define ENVU_VERSION_INT 300
 
 /**
  * Gets the version of c-env-utils.
