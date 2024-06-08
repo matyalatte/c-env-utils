@@ -75,14 +75,18 @@ char *AllocStrWithConst(const char *c) {
     return str;
 }
 
-static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
+char *AppendStr(char *c1, const char *c2) {
+    if (c1 == NULL || c2 == NULL)
+        return c1;
     size_t str_len1 = strlen(c1);
     size_t str_len2 = strlen(c2);
-    char *str = AllocStr(str_len1 + str_len2);
-    if (str == NULL)
+    char *str = realloc(c1, (str_len1 + str_len2 + 1) * sizeof(char));
+    if (str == NULL) {
+        envuFree(c1);
         return NULL;
-    memcpy_s(str, str_len1, c1, str_len1);
+    }
     memcpy_s(str + str_len1, str_len2, c2, str_len2);
+    str[str_len1 + str_len2] = '\0';
     return str;
 }
 
@@ -294,8 +298,7 @@ char *envuGetHome() {
         envuFree(path);
         path = AllocStrWithConst("\\");
     }
-    char *str = AllocStrWithTwoConsts(drive, path);
-    envuFree(drive);
+    char *str = AppendStr(drive, path);
     envuFree(path);
     return str;
 }

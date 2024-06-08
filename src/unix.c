@@ -57,14 +57,18 @@ char *AllocStrWithConst(const char *c) {
     return str;
 }
 
-static char *AllocStrWithTwoConsts(const char *c1, const char *c2) {
+char *AppendStr(char *c1, const char *c2) {
+    if (c1 == NULL || c2 == NULL)
+        return c1;
     size_t str_len1 = strlen(c1);
     size_t str_len2 = strlen(c2);
-    char *str = AllocStr(str_len1 + str_len2);
-    if (str == NULL)
+    char *str = realloc(c1, (str_len1 + str_len2 + 1) * sizeof(char));
+    if (str == NULL) {
+        envuFree(c1);
         return NULL;
-    memcpy(str, c1, str_len1);
+    }
     memcpy(str + str_len1, c2, str_len2);
+    str[str_len1 + str_len2] = '\0';
     return str;
 }
 
@@ -154,13 +158,12 @@ static inline char *getExecutablePathOpenBSD() {
         int len = strlen(*p);
 
         // concat an environment path with argv[0]
-        char *abs_path;
+        char *abs_path = AllocStrWithConst(*p);
         if ((*p)[len - 1] == '/') {
-            abs_path = AllocStrWithTwoConsts(*p, argv0);
+            abs_path = AppendStr(abs_path, argv0);
         } else {
-            char *path2 = AllocStrWithTwoConsts(*p, "/");
-            abs_path = AllocStrWithTwoConsts(path2, argv0);
-            envuFree(path2);
+            abs_path = AppendStr(abs_path, "/");
+            abs_path = AppendStr(abs_path, argv0);
         }
 
         char *fullpath = envuGetRealPath(abs_path);
@@ -269,11 +272,9 @@ char *envuGetFullPath(const char *path) {
         abs_path = AllocStrWithConst(path);
     } else {
         // append working directory
-        char *cwd = envuGetCwd();
-        char *cwd2 = AllocStrWithTwoConsts(cwd, "/");
-        abs_path = AllocStrWithTwoConsts(cwd2, path);
-        envuFree(cwd);
-        envuFree(cwd2);
+        abs_path = envuGetCwd();
+        abs_path = AppendStr(abs_path, "/");
+        abs_path = AppendStr(abs_path, path);
     }
 
     char *resolved = AllocStr(strlen(abs_path));
@@ -640,12 +641,9 @@ static inline char *getOSProductNameOthers() {
     if (os_ver == NULL)
         return os;
 
-    char *tmp = AllocStrWithTwoConsts(os, " ");
-    char *ret = AllocStrWithTwoConsts(tmp, os_ver);
-    envuFree(os);
-    envuFree(os_ver);
-    envuFree(tmp);
-    return ret;
+    os = AppendStr(os, " ");
+    os = AppendStr(os, os_ver);
+    return os;
 }
 #endif
 

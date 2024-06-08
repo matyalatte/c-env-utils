@@ -14,6 +14,9 @@ extern char *AllocStr(size_t size);
 #define AllocEmptyStr() AllocStr(0)
 extern char *AllocStrWithConst(const char *c);
 
+// Don't free c1 after this function becuase return value takes its ownership.
+extern char *AppendStr(char *c1, const char *c2);
+
 #ifdef _WIN32
 extern wchar_t *AllocWstr(size_t size);
 #define AllocEmptyWstr() AllocWstr(0)
