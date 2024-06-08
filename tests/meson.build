@@ -35,15 +35,9 @@ else
     true_os_version = r.stdout().strip().split('-')[0]
     if envu_OS == 'darwin'
         # get os name from SystemVersion.plist
-        r = run_command('/usr/libexec/PlistBuddy', '-c',
-                        'print ProductName',
-                        '/System/Library/CoreServices/SystemVersion.plist',
-                        check: true)
+        r = run_command('sw_vers', '-productName', check: true)
         prod_name = r.stdout().strip()
-        r = run_command('/usr/libexec/PlistBuddy', '-c',
-                        'print ProductVersion',
-                        '/System/Library/CoreServices/SystemVersion.plist',
-                        check: true)
+        r = run_command('sw_vers', '-productVersion', check: true)
         prod_version = r.stdout().strip()
         true_os_product_name = prod_name + ' ' + prod_version
     elif envu_OS == 'linux'
