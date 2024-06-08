@@ -102,12 +102,23 @@ TEST(UtilTest, envuUTF16toUTF8) {
 
 TEST(UtilTest, envuGetOS) {
     char* os = envuGetOS();
-    std::string os_lower(os);
-    std::transform(os_lower.begin(), os_lower.end(), os_lower.begin(),
-                   [](unsigned char c){ return (unsigned char)std::tolower(c); });
+    ASSERT_STREQ(TRUE_OS, os);
     envuFree(os);
-    ASSERT_STREQ(TRUE_OS, os_lower.c_str());
 }
+
+TEST(UtilTest, envuGetOSVersion) {
+    char* os_ver = envuGetOSVersion();
+    ASSERT_STREQ(TRUE_OS_VERSION, os_ver);
+    envuFree(os_ver);
+}
+
+#ifndef __HAIKU__
+TEST(UtilTest, envuGetOSProductName) {
+    char* os_prod_name = envuGetOSProductName();
+    ASSERT_STREQ(TRUE_OS_PRODUCT_NAME, os_prod_name);
+    envuFree(os_prod_name);
+}
+#endif
 
 // TODO: test with long paths
 // TODO: test with unicode strings
