@@ -33,6 +33,7 @@
 int setenv(const char *envname, const char *envval, int overwrite);
 int unsetenv(const char *name);
 ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+char *realpath(const char *file_name, char *resolved_name);
 #endif
 
 #ifndef PATH_MAX

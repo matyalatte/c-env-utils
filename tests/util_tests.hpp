@@ -38,7 +38,7 @@ std::string Exec(const std::string &cmd) {
 
 class SymlinkTest : public ::testing::Test {
  protected:
-    virtual void SetUp() override {
+    virtual void SetUp() {
         cwd = envuGetCwd();
         ASSERT_STREQ(TRUE_CWD, cwd);
 
@@ -47,7 +47,7 @@ class SymlinkTest : public ::testing::Test {
         ASSERT_EQ(0, ret);
     }
 
-    virtual void TearDown() override {
+    virtual void TearDown() {
         char *build_dir = envuGetCwd();
         ASSERT_STREQ(TRUE_BUILD_DIR, build_dir);
         envuFree(build_dir);
