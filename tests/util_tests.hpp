@@ -52,7 +52,7 @@ class SymlinkTest : public ::testing::Test {
         ASSERT_STREQ(TRUE_BUILD_DIR, build_dir);
         envuFree(build_dir);
 
-        // resotre cwd
+        // restore cwd
         int ret = envuSetCwd(cwd);
         EXPECT_EQ(0, ret);
         envuFree(cwd);

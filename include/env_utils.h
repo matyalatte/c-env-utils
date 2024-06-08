@@ -72,7 +72,7 @@ _ENVU_EXTERN int envuPathExists(const char *path);
 
 /**
  * Gets a full path of the specified path.
- * It resolves dot segments but ignores symlinks and the PATH variable.
+ * It resolves dot segments but ignores symlinks.
  *
  * @note Strings that are returned from this method should be freed with envuFree().
  *
@@ -83,8 +83,7 @@ _ENVU_EXTERN char *envuGetFullPath(const char *path);
 
 /**
  * Gets a real path of the specified path.
- * It can resolve symlinks and refer the PATH variables.
- * But it fails if the specified path does not exist.
+ * It can resolve symlinks but it fails if the specified path does not exist.
  *
  * @warning This function can NOT resolve symlinks on Windows.
  *
