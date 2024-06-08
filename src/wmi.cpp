@@ -9,6 +9,8 @@
 
 #if _MSC_VER && !__INTEL_COMPILER
 #pragma comment(lib, "wbemuuid.lib")
+#else
+#define WBEM_INFINITE 0xffffffff
 #endif
 
 // Most code is from the official document
@@ -71,7 +73,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
         NULL,  // User name. NULL = current user
         NULL,  // User password. NULL = current
         0,     // Locale. NULL indicates current
-        NULL,  // Security flags.
+        0,     // Security flags.
         0,     // Authority (for example, Kerberos)
         0,     // Context object
         &pSvc);
@@ -129,21 +131,25 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
     ULONG uReturn = 0;
     wchar_t *value = NULL;
 
-    while (pEnumerator) {
-        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    hres = WBEM_S_NO_ERROR;
+    while (pEnumerator && SUCCEEDED(hres)) {
+        hres = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 
         if (0 == uReturn)
             break;
 
-        VARIANT vtProp;
+        if (SUCCEEDED(hres)) {
+            VARIANT vtProp;
 
-        VariantInit(&vtProp);
-        // Get the value of a property (key).
-        hr = pclsObj->Get(key, 0, &vtProp, 0, 0);
-        value = envuAllocWstrWithConst(vtProp.bstrVal);
-        VariantClear(&vtProp);
+            VariantInit(&vtProp);
+            // Get the value of a property (key).
+            hres = pclsObj->Get(key, 0, &vtProp, 0, 0);
+            if (SUCCEEDED(hres))
+                value = envuAllocWstrWithConst(vtProp.bstrVal);
+            VariantClear(&vtProp);
 
-        pclsObj->Release();
+            pclsObj->Release();
+        }
     }
 
     // Cleanup
