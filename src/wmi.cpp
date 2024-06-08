@@ -140,7 +140,7 @@ wchar_t *getOSInfoFromWMI(const wchar_t *key) {
         VariantInit(&vtProp);
         // Get the value of a property (key).
         hr = pclsObj->Get(key, 0, &vtProp, 0, 0);
-        value = AllocWstrWithConst(vtProp.bstrVal);
+        value = envuAllocWstrWithConst(vtProp.bstrVal);
         VariantClear(&vtProp);
 
         pclsObj->Release();

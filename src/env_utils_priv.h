@@ -8,19 +8,38 @@ extern "C" {
 #define is_numeric(c) ((c >= '0' && c <= '9') || c == '.')
 #define is_alphabet(c) ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
 
-extern char **ParseEnvPathsBase(const char *env_path, int *path_count, char delim);
+/**
+ * Allocates memory blocks of a string.
+ *
+ * @param size The buffer size of a string excluding the null terminator.
+ * @return A pointer to an allocated string. Or a null pointer if failed.
+ */
+extern char *envuAllocStr(size_t size);
+#define envuAllocEmptyStr() envuAllocStr(0)
 
-extern char *AllocStr(size_t size);
-#define AllocEmptyStr() AllocStr(0)
-extern char *AllocStrWithConst(const char *c);
+/**
+ * Allocates memory blocks and initialize them with a string.
+ *
+ * @param c An initial value for the allocated string.
+ * @return A pointer to an allocated string. Or a null pointer if failed.
+ */
+extern char *envuAllocStrWithConst(const char *c);
 
-// Don't free c1 after this function becuase return value takes its ownership.
-extern char *AppendStr(char *c1, const char *c2);
+/**
+ * Reallocates memory blocks of a string and appends another string to it.
+ *
+ * @warning Don't free str1 after this function because return value takes its ownership.
+ *
+ * @param str1 A pointer to a string that will be reallocated.
+ * @param str2 A pointer to a string that will be appended to str1.
+ * @return A pointer to an reallocated string. Or a null pointer if failed.
+ */
+extern char *envuAppendStr(char *str1, const char *str2);
 
 #ifdef _WIN32
-extern wchar_t *AllocWstr(size_t size);
-#define AllocEmptyWstr() AllocWstr(0)
-extern wchar_t *AllocWstrWithConst(const wchar_t *c);
+extern wchar_t *envuAllocWstr(size_t size);
+#define envuAllocEmptyWstr() envuAllocWstr(0)
+extern wchar_t *envuAllocWstrWithConst(const wchar_t *c);
 extern wchar_t *getOSInfoFromWMI(const wchar_t *key);
 #endif
 

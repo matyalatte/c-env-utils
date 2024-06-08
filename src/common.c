@@ -27,11 +27,11 @@ void envuFree(void *p) {
     free(p);
 }
 
-char **ParseEnvPathsBase(const char *env_path, int *path_count, char delim) {
+static inline char **envuParseEnvPathsBase(const char *env_path, int *path_count, char delim) {
     if (env_path == NULL)
         return NULL;
 
-    char *copied_env_path = AllocStrWithConst(env_path);
+    char *copied_env_path = envuAllocStrWithConst(env_path);
     int count = 0;
     {
         char *p = copied_env_path;
@@ -63,7 +63,7 @@ char **ParseEnvPathsBase(const char *env_path, int *path_count, char delim) {
         while (p < paths + count) {
             size_t len = strlen(env_p);
             if (len > 0) {
-                *p = AllocStrWithConst(env_p);
+                *p = envuAllocStrWithConst(env_p);
                 if (*p == NULL) {
                     // Failed to alloc a path
                     envuFreeEnvPaths(paths);
@@ -80,10 +80,16 @@ char **ParseEnvPathsBase(const char *env_path, int *path_count, char delim) {
     return paths;
 }
 
+char **envuParseEnvPaths(const char *env_path, int *path_count) {
+#ifdef _WIN32
+    return envuParseEnvPathsBase(env_path, path_count, ';');
+#else
+    return envuParseEnvPathsBase(env_path, path_count, ':');
+#endif
+}
+
 char **envuGetEnvPaths(int *path_count) {
     char *env_path = envuGetEnv("PATH");
-    // ParseEnvPathsBase(env_path, path_count, ';') on Windows
-    // ParseEnvPathsBase(env_path, path_count, ':') on other platforms
     char **paths = envuParseEnvPaths(env_path, path_count);
     envuFree(env_path);
     return paths;

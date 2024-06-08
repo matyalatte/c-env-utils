@@ -29,5 +29,5 @@ char *getOSVersionHaiku() {
     if (abiVersion.IsEmpty())
         abiVersion = "Unknown";
 
-    return AllocStrWithConst(abiVersion.String());
+    return envuAllocStrWithConst(abiVersion.String());
 }

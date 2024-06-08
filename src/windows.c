@@ -22,17 +22,17 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define SIZET_TO_INT(N) (int)MIN(N, INT_MAX)
 
-wchar_t *AllocWstr(size_t size) {
+wchar_t *envuAllocWstr(size_t size) {
     wchar_t *wstr;
     wstr = (wchar_t *)calloc(size + 1, sizeof(wchar_t));
     return wstr;
 }
 
-wchar_t *AllocWstrWithConst(const wchar_t *c) {
+wchar_t *envuAllocWstrWithConst(const wchar_t *c) {
     if (c == NULL)
         return NULL;
     size_t str_len = wcslen(c);
-    wchar_t *wstr = AllocWstr(str_len);
+    wchar_t *wstr = envuAllocWstr(str_len);
     if (wstr == NULL)
         return NULL;
     memcpy_s(wstr, str_len * sizeof(wchar_t), c, str_len * sizeof(wchar_t));
@@ -43,49 +43,49 @@ wchar_t *envuUTF8toUTF16(const char* str) {
     if (str == NULL)
         return NULL;
     if (*str == '\0')
-        return AllocEmptyWstr();
+        return envuAllocEmptyWstr();
 
     wchar_t *wstr;
     int str_len = SIZET_TO_INT(strlen(str));
     int wstr_len = MultiByteToWideChar(ENVU_CP_UTF8, 0, str, str_len + 1, NULL, 0);
     if (wstr_len == 0)
-        return AllocEmptyWstr();
+        return envuAllocEmptyWstr();
 
-    wstr = AllocWstr(wstr_len);
+    wstr = envuAllocWstr(wstr_len);
     int res = MultiByteToWideChar(ENVU_CP_UTF8, 0, str, str_len + 1, wstr, wstr_len);
     if (res != wstr_len)
         *wstr = L'\0';
     return wstr;
 }
 
-char *AllocStr(size_t size) {
+char *envuAllocStr(size_t size) {
     char *str;
     str = (char *)calloc(size + 1, sizeof(char));
     return str;
 }
 
-char *AllocStrWithConst(const char *c) {
+char *envuAllocStrWithConst(const char *c) {
     if (c == NULL)
         return NULL;
     size_t str_len = strlen(c);
-    char *str = AllocStr(str_len);
+    char *str = envuAllocStr(str_len);
     if (str == NULL)
         return NULL;
     memcpy_s(str, str_len, c, str_len);
     return str;
 }
 
-char *AppendStr(char *c1, const char *c2) {
-    if (c1 == NULL || c2 == NULL)
-        return c1;
-    size_t str_len1 = strlen(c1);
-    size_t str_len2 = strlen(c2);
-    char *str = realloc(c1, (str_len1 + str_len2 + 1) * sizeof(char));
+char *envuAppendStr(char *str1, const char *str2) {
+    if (str1 == NULL || str2 == NULL)
+        return str1;
+    size_t str_len1 = strlen(str1);
+    size_t str_len2 = strlen(str2);
+    char *str = realloc(str1, (str_len1 + str_len2 + 1) * sizeof(char));
     if (str == NULL) {
-        envuFree(c1);
+        envuFree(str1);
         return NULL;
     }
-    memcpy_s(str + str_len1, str_len2, c2, str_len2);
+    memcpy_s(str + str_len1, str_len2, str2, str_len2);
     str[str_len1 + str_len2] = '\0';
     return str;
 }
@@ -94,15 +94,15 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
     if (wstr == NULL)
         return NULL;
     if (*wstr == L'\0')
-        return AllocEmptyStr();
+        return envuAllocEmptyStr();
 
     char *str;
     int wstr_len = SIZET_TO_INT(wcslen(wstr));
     int str_len = WideCharToMultiByte(ENVU_CP_UTF8, 0, wstr, wstr_len + 1, NULL, 0, NULL, NULL);
     if (str_len == 0)
-        return AllocEmptyStr();
+        return envuAllocEmptyStr();
 
-    str = AllocStr(str_len);
+    str = envuAllocStr(str_len);
     int res = WideCharToMultiByte(ENVU_CP_UTF8, 0, wstr, wstr_len + 1, str, str_len, NULL, NULL);
     if (res != str_len)
         *str = '\0';
@@ -180,9 +180,9 @@ char *envuGetDirectory(const char *path) {
     if (path == NULL)
         return NULL;
     if (*path == '\0')
-        return AllocStrWithConst(".");
+        return envuAllocStrWithConst(".");
 
-    char *copied_path = AllocStrWithConst(path);
+    char *copied_path = envuAllocStrWithConst(path);
 
     // TODO: read the path backwards.
     char *p = copied_path;
@@ -199,7 +199,7 @@ char *envuGetDirectory(const char *path) {
     if (slash_p[0] == NULL) {
         // slash not found
         envuFree(copied_path);
-        return AllocStrWithConst(".");
+        return envuAllocStrWithConst(".");
     }
     if (slash_p[0] + 1 == p) {
         // the last character is a slash
@@ -210,7 +210,7 @@ char *envuGetDirectory(const char *path) {
                 return copied_path;
             }
             envuFree(copied_path);
-            return AllocStrWithConst(".");
+            return envuAllocStrWithConst(".");
         }
         slash_p[0] = slash_p[1];
         slash_p[1] = slash_p[2];
@@ -222,7 +222,7 @@ char *envuGetDirectory(const char *path) {
         // overwrite the last slash with null
         slash_p[0][0] = '\0';
     }
-    char *str = AllocStrWithConst(copied_path);
+    char *str = envuAllocStrWithConst(copied_path);
     envuFree(copied_path);
     return str;
 }
@@ -252,7 +252,7 @@ char *envuGetEnv(const char *name) {
         envuFree(wname);
         return NULL;
     }
-    wchar_t* wstr = AllocWstr(size);
+    wchar_t* wstr = envuAllocWstr(size);
     int ret = _wgetenv_s(&size, wstr, size, wname);
     envuFree(wname);
     if (ret) {
@@ -296,9 +296,9 @@ char *envuGetHome() {
     }
     if (path == NULL) {
         envuFree(path);
-        path = AllocStrWithConst("\\");
+        path = envuAllocStrWithConst("\\");
     }
-    char *str = AppendStr(drive, path);
+    char *str = envuAppendStr(drive, path);
     envuFree(path);
     return str;
 }
@@ -322,7 +322,7 @@ char *envuGetUsername() {
 }
 
 char *envuGetOS() {
-    return AllocStrWithConst("Windows");
+    return envuAllocStrWithConst("Windows");
 }
 
 char *envuGetOSVersion() {
@@ -333,8 +333,4 @@ char *envuGetOSVersion() {
 char *envuGetOSProductName() {
     wchar_t *wstr = getOSInfoFromWMI(L"Caption");
     return envuUTF16toUTF8(wstr);
-}
-
-char **envuParseEnvPaths(const char *env_path, int *path_count) {
-    return ParseEnvPathsBase(env_path, path_count, ';');
 }

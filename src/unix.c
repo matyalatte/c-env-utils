@@ -40,34 +40,34 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream);
 #define PATH_MAX  512
 #endif
 
-char *AllocStr(size_t size) {
+char *envuAllocStr(size_t size) {
     char *str;
     str = (char *)calloc(size + 1, sizeof(char));
     return str;
 }
 
-char *AllocStrWithConst(const char *c) {
+char *envuAllocStrWithConst(const char *c) {
     if (c == NULL)
         return NULL;
     size_t str_len = strlen(c);
-    char *str = AllocStr(str_len);
+    char *str = envuAllocStr(str_len);
     if (str == NULL)
         return NULL;
     memcpy(str, c, str_len);
     return str;
 }
 
-char *AppendStr(char *c1, const char *c2) {
-    if (c1 == NULL || c2 == NULL)
-        return c1;
-    size_t str_len1 = strlen(c1);
-    size_t str_len2 = strlen(c2);
-    char *str = realloc(c1, (str_len1 + str_len2 + 1) * sizeof(char));
+char *envuAppendStr(char *str1, const char *str2) {
+    if (str1 == NULL || str2 == NULL)
+        return str1;
+    size_t str_len1 = strlen(str1);
+    size_t str_len2 = strlen(str2);
+    char *str = realloc(str1, (str_len1 + str_len2 + 1) * sizeof(char));
     if (str == NULL) {
-        envuFree(c1);
+        envuFree(str1);
         return NULL;
     }
-    memcpy(str + str_len1, c2, str_len2);
+    memcpy(str + str_len1, str2, str_len2);
     str[str_len1 + str_len2] = '\0';
     return str;
 }
@@ -76,7 +76,7 @@ char *envuGetRealPath(const char *path) {
     char str[PATH_MAX + 1];
     str[PATH_MAX] = '\0';
     char *resolved = realpath(path, str);
-    return AllocStrWithConst(resolved);
+    return envuAllocStrWithConst(resolved);
 }
 
 #ifdef __APPLE__
@@ -108,7 +108,7 @@ static inline char *getExecutablePathFreeBSD() {
     path[path_size] = 0;
     if (*path == '\0')
         return NULL;
-    return AllocStrWithConst(path);
+    return envuAllocStrWithConst(path);
 }
 #elif defined(__OpenBSD__)
 // OpenBSD has no api to get executable path.
@@ -126,7 +126,7 @@ static char *getArgv0() {
         free(argv);
         return NULL;
     }
-    char *argv0 = AllocStrWithConst(argv[0]);
+    char *argv0 = envuAllocStrWithConst(argv[0]);
     free(argv);
     return argv0;
 }
@@ -158,12 +158,12 @@ static inline char *getExecutablePathOpenBSD() {
         int len = strlen(*p);
 
         // concat an environment path with argv[0]
-        char *abs_path = AllocStrWithConst(*p);
+        char *abs_path = envuAllocStrWithConst(*p);
         if ((*p)[len - 1] == '/') {
-            abs_path = AppendStr(abs_path, argv0);
+            abs_path = envuAppendStr(abs_path, argv0);
         } else {
-            abs_path = AppendStr(abs_path, "/");
-            abs_path = AppendStr(abs_path, argv0);
+            abs_path = envuAppendStr(abs_path, "/");
+            abs_path = envuAppendStr(abs_path, argv0);
         }
 
         char *fullpath = envuGetRealPath(abs_path);
@@ -189,7 +189,7 @@ static inline char *getExecutablePathHaiku() {
     image_info info;
     while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
         if (info.type == B_APP_IMAGE)
-            return AllocStrWithConst(info.name);
+            return envuAllocStrWithConst(info.name);
     }
     return NULL;
 }
@@ -230,7 +230,7 @@ static inline char *getExecutablePathProcfs() {
         // So, we need to do it by ourselves.
         return envuGetRealPath(path);
 #else
-        return AllocStrWithConst(path);
+        return envuAllocStrWithConst(path);
 #endif
     }
     // Failed to get exe path
@@ -269,15 +269,15 @@ char *envuGetFullPath(const char *path) {
 
     char *abs_path;
     if (path[0] == '/') {
-        abs_path = AllocStrWithConst(path);
+        abs_path = envuAllocStrWithConst(path);
     } else {
         // append working directory
         abs_path = envuGetCwd();
-        abs_path = AppendStr(abs_path, "/");
-        abs_path = AppendStr(abs_path, path);
+        abs_path = envuAppendStr(abs_path, "/");
+        abs_path = envuAppendStr(abs_path, path);
     }
 
-    char *resolved = AllocStr(strlen(abs_path));
+    char *resolved = envuAllocStr(strlen(abs_path));
     if (abs_path == NULL || resolved == NULL) {
         envuFree(abs_path);
         envuFree(resolved);
@@ -330,7 +330,7 @@ char *envuGetFullPath(const char *path) {
         if (*res_p == '/')
             *res_p = '\0';
     }
-    char *ret = AllocStrWithConst(resolved);
+    char *ret = envuAllocStrWithConst(resolved);
     envuFree(abs_path);
     envuFree(resolved);
     return ret;
@@ -340,13 +340,13 @@ char *envuGetDirectory(const char *path) {
     if (path == NULL)
         return NULL;
     // dirname() may modify the contents of path. So, we use copied one.
-    char *copied_path = AllocStrWithConst(path);
+    char *copied_path = envuAllocStrWithConst(path);
     char *dir = dirname(copied_path);
     if (dir == NULL) {
         free(copied_path);
         return NULL;
     }
-    char *ret = AllocStrWithConst(dir);
+    char *ret = envuAllocStrWithConst(dir);
     free(copied_path);
     return ret;
 }
@@ -355,7 +355,7 @@ char *envuGetCwd() {
     char cwd[PATH_MAX + 1];
     cwd[PATH_MAX] = 0;
     char *ret = getcwd(cwd, PATH_MAX);
-    return AllocStrWithConst(ret);
+    return envuAllocStrWithConst(ret);
 }
 
 int envuSetCwd(const char *path) {
@@ -371,7 +371,7 @@ char *envuGetEnv(const char *name) {
     char *str = getenv(name);
     if (str == NULL)
         return NULL;
-    return AllocStrWithConst(str);
+    return envuAllocStrWithConst(str);
 }
 
 int envuSetEnv(const char *name, const char *value) {
@@ -422,7 +422,7 @@ char *envuGetHome() {
         free(buf);
         return NULL;
     }
-    char *str = AllocStrWithConst(homedir);
+    char *str = envuAllocStrWithConst(homedir);
     free(buf);
     return str;
 }
@@ -443,7 +443,7 @@ char *envuGetUsername() {
         free(buf);
         return NULL;
     }
-    char *str = AllocStrWithConst(name);
+    char *str = envuAllocStrWithConst(name);
     free(buf);
     return str;
 }
@@ -455,7 +455,7 @@ char *envuGetOS() {
     if (uname(&buf) == -1) {
         return NULL;
     }
-    return AllocStrWithConst(buf.sysname);
+    return envuAllocStrWithConst(buf.sysname);
 }
 
 char *envuGetOSVersion() {
@@ -479,7 +479,7 @@ char *envuGetOSVersion() {
         *vp = '\0';
     }
 
-    return AllocStrWithConst(ver);
+    return envuAllocStrWithConst(ver);
 }
 
 #ifdef __APPLE__
@@ -492,7 +492,7 @@ static char *CFStoChar(CFStringRef cfstr) {
     int ret = CFStringGetCString(cfstr, str, sizeof(str), kCFStringEncodingUTF8);
     if (ret) {
         str[255] = '\0';
-        return AllocStrWithConst(str);
+        return envuAllocStrWithConst(str);
     }
     return NULL;
 }
@@ -578,7 +578,7 @@ static inline char *getOSProductNameLinux() {
         if (lineptr[size - 2] == '"')
             lineptr[size - 2] = '\0';
 
-        pretty_name = AllocStrWithConst(lp);
+        pretty_name = envuAllocStrWithConst(lp);
         break;
     }
     fclose(fptr);
@@ -620,7 +620,7 @@ static inline char *getOSProductNameSolaris() {
     }
     *end_p = '\0';
 
-    char *pretty_name = AllocStrWithConst(start_p);
+    char *pretty_name = envuAllocStrWithConst(start_p);
     free(lineptr);
     return pretty_name;
 }
@@ -641,8 +641,8 @@ static inline char *getOSProductNameOthers() {
     if (os_ver == NULL)
         return os;
 
-    os = AppendStr(os, " ");
-    os = AppendStr(os, os_ver);
+    os = envuAppendStr(os, " ");
+    os = envuAppendStr(os, os_ver);
     return os;
 }
 #endif
@@ -657,8 +657,4 @@ char *envuGetOSProductName() {
 #else
     return getOSProductNameOthers();
 #endif
-}
-
-char **envuParseEnvPaths(const char *env_path, int *path_count) {
-    return ParseEnvPathsBase(env_path, path_count, ':');
 }
