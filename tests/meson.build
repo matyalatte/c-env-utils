@@ -2,19 +2,22 @@ if meson.is_cross_build()
     error('unit tests does NOT support cross build.')
 endif
 
+fs = import('fs')
+
 true_build_dir = meson.current_build_dir().replace('\\', '\\\\')
+true_build_dir_name = fs.name(true_build_dir)
 true_source_root = meson.project_source_root().replace('\\', '\\\\')
 true_exe_name = 'env_utils_test'
 if envu_OS == 'windows'
     true_exe_name += '.exe'
 endif
-fs = import('fs')
 true_home = fs.expanduser('~').replace('\\', '\\\\')
 r = run_command('whoami', check: true)
 true_username = r.stdout().strip().split('\\')[-1]
 
 test_conf = configuration_data()
 test_conf.set('BUILD_DIR', true_build_dir)
+test_conf.set('BUILD_DIR_NAME', true_build_dir_name)
 test_conf.set('SOURCE_ROOT', true_source_root)
 test_conf.set('EXE_NAME', true_exe_name)
 test_conf.set('OS', envu_OS)
@@ -29,6 +32,15 @@ endif
 configure_file(input : 'true_env_info.h.in',
                output : 'true_env_info.h',
                configuration : test_conf)
+
+if envu_OS != 'windows'
+    # unit tests use 'ln' and 'rm' commands.
+    find_program('ln', required: true)
+    find_program('rm', required: true)
+
+    # unit tests use another executable.
+    subdir('test_cli')
+endif
 
 test_exe = executable('env_utils_test',
     'main.cpp',
