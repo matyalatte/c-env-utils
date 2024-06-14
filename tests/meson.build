@@ -45,7 +45,9 @@ else
         r = run_command('grep', 'PRETTY_NAME', '/etc/os-release', check: true)
         true_os_product_name = r.stdout().strip().split('=')[1].strip('"')
     elif envu_OS == 'haiku'
-        true_os_product_name = 'failed'
+        r = run_command('version', '/boot/system/lib/libbe.so', check: true)
+        ver = r.stdout().strip()
+        true_os_product_name = true_os + ' ' + ver
     elif envu_OS == 'sunos'
         # get os name from /etc/release
         r = run_command('head', '-1', '/etc/release', check: true)
@@ -85,8 +87,18 @@ if envu_OS != 'windows'
     subdir('test_cli')
 endif
 
+test_cpp_args = []
+if envu_OS == 'windows'
+    if envu_compiler == 'msvc'
+        test_cpp_args += ['/source-charset:utf-8']
+    elif envu_compiler == 'gcc'
+        test_cpp_args += ['-finput-charset=UTF-8']
+    endif
+endif
+
 test_exe = executable('env_utils_test',
     'main.cpp',
+    cpp_args: test_cpp_args,
     dependencies : [env_utils_dep, gtest_dep, gmock_dep],
     install : false)
 

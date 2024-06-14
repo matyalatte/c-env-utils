@@ -77,14 +77,39 @@ TEST(PathTest, envuGetFullPathAbsolute) {
     }
 }
 
-TEST(PathTest, envuGetFullPathLongPath) {
-    std::vector<std::pair<const char*, const char*>> cases = {
-    };
-    for (auto c : cases) {
-        char* fullpath = envuGetFullPath(c.first);
-        EXPECT_STREQ(c.second, fullpath) << "  c.first: " << c.first << std::endl;
-        envuFree(fullpath);
-    }
+#define TEST_DIRS "/testdir/testdir/testdir/testdir/testdir/testdir/testdir/testdir"
+#define TEST_DIRS_WIN "\\testdir\\testdir\\testdir\\testdir\\testdir\\testdir\\testdir\\testdir"
+
+TEST(PathTest, envuGetFullPathLong) {
+    const char* longpath =
+        TEST_DIRS TEST_DIRS TEST_DIRS TEST_DIRS
+        TEST_DIRS TEST_DIRS TEST_DIRS TEST_DIRS "/../testdir/";
+    const char* expected =
+#ifdef _WIN32
+        WIN_DRIVE ":"
+        TEST_DIRS_WIN TEST_DIRS_WIN TEST_DIRS_WIN TEST_DIRS_WIN
+        TEST_DIRS_WIN TEST_DIRS_WIN TEST_DIRS_WIN TEST_DIRS_WIN;
+#else
+        TEST_DIRS TEST_DIRS TEST_DIRS TEST_DIRS
+        TEST_DIRS TEST_DIRS TEST_DIRS TEST_DIRS;
+#endif
+    char* fullpath = envuGetFullPath(longpath);
+    EXPECT_STREQ(expected, fullpath);
+    envuFree(fullpath);
+}
+
+TEST(PathTest, envuGetFullPathUnicode) {
+    // "/フォルダ/폴더/文件/."
+    const char* unipath = u8"/\u30d5\u30a9\u30eb\u30c0/\ud3f4\ub354/\u6587\u4ef6/.";
+    const char* expected =
+#ifdef _WIN32
+        WIN_DRIVE u8":\\\u30d5\u30a9\u30eb\u30c0\\\ud3f4\ub354\\\u6587\u4ef6";
+#else
+        u8"/\u30d5\u30a9\u30eb\u30c0/\ud3f4\ub354/\u6587\u4ef6";
+#endif
+    char* fullpath = envuGetFullPath(unipath);
+    EXPECT_STREQ(expected, fullpath);
+    envuFree(fullpath);
 }
 
 TEST(PathTest, envuGetFullPathRelative) {

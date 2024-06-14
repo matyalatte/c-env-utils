@@ -112,13 +112,11 @@ TEST(UtilTest, envuGetOSVersion) {
     envuFree(os_ver);
 }
 
-#ifndef __HAIKU__
 TEST(UtilTest, envuGetOSProductName) {
     char* os_prod_name = envuGetOSProductName();
     ASSERT_STREQ(TRUE_OS_PRODUCT_NAME, os_prod_name);
     envuFree(os_prod_name);
 }
-#endif
 
 // TODO: test with long paths
 // TODO: test with unicode strings

@@ -8,10 +8,6 @@
 #include "env_utils_windows.h"
 #include "env_utils_priv.h"
 
-#ifndef MAX_PATH
-#warning("Warning: Failed to get MAX_PATH. The compiler uses 260 for it.")
-#define MAX_PATH  260
-#endif
 #ifndef UNLEN
 #warning("Warning: Failed to get UNLEN. The compiler uses 256 for it.")
 #define UNLEN 256
@@ -110,12 +106,30 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
 }
 
 char *envuGetExecutablePath() {
-    wchar_t filename[MAX_PATH + 1];
-    filename[MAX_PATH] = 0;
-    int ret = GetModuleFileNameW(NULL, filename, MAX_PATH);
-    if (ret == 0)
+    wchar_t *wpath = NULL;
+    int max_size = 256;
+    int size;
+
+    // Note: The max length of file paths is not MAX_PATH now.
+    while (max_size <= 32768) {
+        wpath = envuAllocWstr(max_size);
+        size = GetModuleFileNameW(NULL, wpath, max_size);
+        if (size < max_size)
+            break;
+
+        // the buffer size was not enough.
+        envuFree(wpath);
+        max_size *= 2;
+    }
+
+    if (size == 0) {
+        envuFree(wpath);
         return NULL;
-    return envuUTF16toUTF8(filename);
+    }
+
+    char *path = envuUTF16toUTF8(wpath);
+    envuFree(wpath);
+    return path;
 }
 
 static inline DWORD getFileAttributes(const char *path) {
@@ -150,18 +164,23 @@ char *envuGetFullPath(const char *path) {
         return envuGetCwd();
 
     wchar_t *wpath = envuUTF8toUTF16(path);
-    wchar_t fullpath[MAX_PATH + 1];
-    fullpath[MAX_PATH] = 0;
-    int size = GetFullPathNameW(wpath, MAX_PATH, fullpath, NULL);
-    if (size < 2)  // failed to get full path.
+
+    wchar_t *wfullpath = _wfullpath(NULL, wpath, 0);
+    envuFree(wpath);
+
+    size_t size = wcslen(wfullpath);
+    if (size < 2) {
+        envuFree(wfullpath);
         return NULL;
+    }
 
     // remove the last slash
-    if (fullpath[size - 1] == L'\\' && fullpath[size - 2] != L':')
-        fullpath[size - 1] = L'\0';
+    if (wfullpath[size - 1] == L'\\' && wfullpath[size - 2] != L':')
+        wfullpath[size - 1] = L'\0';
 
-    envuFree(wpath);
-    return envuUTF16toUTF8(fullpath);
+    char *fullpath = envuUTF16toUTF8(wfullpath);
+    envuFree(wfullpath);
+    return fullpath;
 }
 
 static int isAbsPath(const char *path) {
@@ -228,10 +247,12 @@ char *envuGetDirectory(const char *path) {
 }
 
 char *envuGetCwd() {
-    wchar_t cwd[MAX_PATH + 1];
-    cwd[MAX_PATH] = 0;
-    wchar_t *ret = _wgetcwd(cwd, MAX_PATH);
-    return envuUTF16toUTF8(ret);
+    wchar_t *cwd = _wgetcwd(NULL, 0);
+    if (cwd == NULL)
+        return NULL;
+    char *ret = envuUTF16toUTF8(cwd);
+    free(cwd);
+    return ret;
 }
 
 int envuSetCwd(const char *path) {
