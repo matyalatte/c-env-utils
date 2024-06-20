@@ -84,3 +84,34 @@ meson test -C build
 meson setup build -Dcli=false -Dtests=false
 meson compile -C build
 ```
+
+### Build as Subproject
+
+You don't need to clone the git repo if you build your project with meson.  
+Save the following text as `subprojects/env_utils.wrap`.  
+
+```ini
+[wrap-git]
+url = https://github.com/matyalatte/c-env-utils.git
+revision = head
+depth = 1
+
+[provide]
+env_utils = env_utils_dep
+```
+
+Then, you can use c-env-utils in your meson project.
+
+```python
+env_utils_dep = dependency('env_utils', fallback : ['env_utils', 'env_utils_dep'])
+executable('your_exe_name', ['your_code.cpp'], dependencies : [env_utils_dep])
+```
+
+```bash
+meson setup build -Denv_utils:cli=false -Denv_utils:tests=false
+meson compile -C build
+```
+
+## Projects Which Use c-env-utils
+
+- [Tuw](https://github.com/matyalatte/tuw): A tiny GUI wrapper for command-line tools.
