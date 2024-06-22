@@ -44,7 +44,7 @@ extern wchar_t *getOSInfoFromWMI(const wchar_t *key);
 #endif
 
 #ifdef __HAIKU__
-extern char *getOSVersionHaiku();
+extern char *getOSVersionHaiku(void);
 #endif
 
 #ifdef __cplusplus

@@ -8,15 +8,15 @@
 #include "env_utils.h"
 #include "env_utils_priv.h"
 
-const char* envuGetVersion() {
+const char* envuGetVersion(void) {
     return ENVU_VERSION;
 }
 
-int envuGetVersionAsInt() {
+int envuGetVersionAsInt(void) {
     return ENVU_VERSION_INT;
 }
 
-char *envuGetExecutableDir() {
+char *envuGetExecutableDir(void) {
     char *exe_path = envuGetExecutablePath();
     char *exe_dir = envuGetDirectory(exe_path);
     envuFree(exe_path);

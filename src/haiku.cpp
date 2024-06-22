@@ -7,7 +7,7 @@
 
 // Use a method from SysInfoView::_GetABIVersion
 // https://cgit.haiku-os.org/haiku/tree/src/apps/aboutsystem/AboutSystem.cpp
-char *getOSVersionHaiku() {
+char *getOSVersionHaiku(void) {
     BString abiVersion;
 
     // the version is stored in the BEOS:APP_VERSION attribute of libbe.so

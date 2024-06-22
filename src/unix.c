@@ -82,7 +82,7 @@ char *envuGetRealPath(const char *path) {
 
 #ifdef __APPLE__
 // macOS requires _NSGetExecutablePath to get the executable path.
-static inline char *getExecutablePathApple() {
+static inline char *getExecutablePathApple(void) {
     char path[PATH_MAX + 1];
     path[PATH_MAX] = '\0';
     uint32_t bufsize = PATH_MAX;
@@ -97,7 +97,7 @@ static inline char *getExecutablePathApple() {
 }
 #elif defined(__FreeBSD__)
 // FreeBSD requires sysctl to get the executable path.
-static inline char *getExecutablePathFreeBSD() {
+static inline char *getExecutablePathFreeBSD(void) {
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
 
@@ -114,7 +114,7 @@ static inline char *getExecutablePathFreeBSD() {
 #elif defined(__OpenBSD__)
 // OpenBSD has no api to get executable path.
 // So, we need to guess it from argv[0]
-static char *getArgv0() {
+static char *getArgv0(void) {
     char **argv;
     size_t len;
     int mib[4] = { CTL_KERN, KERN_PROC_ARGS, getpid(), KERN_PROC_ARGV };
@@ -132,7 +132,7 @@ static char *getArgv0() {
     return argv0;
 }
 
-static inline char *getExecutablePathOpenBSD() {
+static inline char *getExecutablePathOpenBSD(void) {
     // try readlink
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
@@ -185,7 +185,7 @@ static inline char *getExecutablePathOpenBSD() {
 }
 #elif defined(__HAIKU__)
 // Haiku OS requires get_next_image_info to get the executable path.
-static inline char *getExecutablePathHaiku() {
+static inline char *getExecutablePathHaiku(void) {
     int32_t cookie = 0;
     image_info info;
     while (get_next_image_info(B_CURRENT_TEAM, &cookie, &info) == B_OK) {
@@ -205,7 +205,7 @@ static int tryReadlink(const char *link, char *path, int path_size) {
     return new_path_size;
 }
 
-static inline char *getExecutablePathProcfs() {
+static inline char *getExecutablePathProcfs(void) {
     // get an executable path with readlink()
     char path[PATH_MAX + 1];
     path[PATH_MAX] = 0;
@@ -239,7 +239,7 @@ static inline char *getExecutablePathProcfs() {
 }
 #endif
 
-char *envuGetExecutablePath() {
+char *envuGetExecutablePath(void) {
 #ifdef __APPLE__
     return getExecutablePathApple();
 #elif defined(__FreeBSD__)
@@ -352,7 +352,7 @@ char *envuGetDirectory(const char *path) {
     return ret;
 }
 
-char *envuGetCwd() {
+char *envuGetCwd(void) {
     char cwd[PATH_MAX + 1];
     cwd[PATH_MAX] = 0;
     char *ret = getcwd(cwd, PATH_MAX);
@@ -409,7 +409,7 @@ static struct passwd *getpwuid_safe(char **buf) {
     return result;
 }
 
-char *envuGetHome() {
+char *envuGetHome(void) {
     char *buf;
     struct passwd *p = getpwuid_safe(&buf);
 
@@ -428,7 +428,7 @@ char *envuGetHome() {
     return str;
 }
 
-char *envuGetUsername() {
+char *envuGetUsername(void) {
     char *buf;
     struct passwd *p = getpwuid_safe(&buf);
 
@@ -450,7 +450,7 @@ char *envuGetUsername() {
 }
 
 // Darwin, Linux, FreeBSD, OpenBSD, NetBSD, Haiku, SunOS, etc.
-char *envuGetOS() {
+char *envuGetOS(void) {
     struct utsname buf = { 0 };
     // Note: uname(&buf) can be positive on Solaris
     if (uname(&buf) == -1) {
@@ -459,7 +459,7 @@ char *envuGetOS() {
     return envuAllocStrWithConst(buf.sysname);
 }
 
-char *envuGetOSVersion() {
+char *envuGetOSVersion(void) {
     struct utsname buf = { 0 };
     // Note: uname(&buf) can be positive on Solaris
     if (uname(&buf) == -1) {
@@ -484,8 +484,8 @@ char *envuGetOSVersion() {
 }
 
 #ifdef __APPLE__
-CFDictionaryRef _CFCopyServerVersionDictionary();
-CFDictionaryRef _CFCopySystemVersionDictionary();
+CFDictionaryRef _CFCopyServerVersionDictionary(void);
+CFDictionaryRef _CFCopySystemVersionDictionary(void);
 
 static char *CFStoChar(CFStringRef cfstr) {
     // Note: The length of string should be smaller than 256.
@@ -498,7 +498,7 @@ static char *CFStoChar(CFStringRef cfstr) {
     return NULL;
 }
 
-static inline char *getOSProductNameApple() {
+static inline char *getOSProductNameApple(void) {
     // Get ProductName and ProductVersion
     // from /System/Library/CoreServices/*Version.plist
 
@@ -541,7 +541,7 @@ static inline char *getOSProductNameApple() {
     return cstr;
 }
 #elif defined(__linux__)
-static inline char *getOSProductNameLinux() {
+static inline char *getOSProductNameLinux(void) {
     // Get the value of "PRETTY_NAME" in /etc/os-release
     FILE *fptr;
     fptr = fopen("/etc/os-release", "r");
@@ -587,7 +587,7 @@ static inline char *getOSProductNameLinux() {
     return pretty_name;
 }
 #elif defined(__sun)
-static inline char *getOSProductNameSolaris() {
+static inline char *getOSProductNameSolaris(void) {
     // Get the first alphanumeric part in /etc/release
     FILE *fptr;
     fptr = fopen("/etc/release", "r");
@@ -626,7 +626,7 @@ static inline char *getOSProductNameSolaris() {
     return pretty_name;
 }
 #else
-static inline char *getOSProductNameOthers() {
+static inline char *getOSProductNameOthers(void) {
     // concat envuGetOS and envuGetOSVersion on other platforms.
     char *os = envuGetOS();
     if (os == NULL)
@@ -648,7 +648,7 @@ static inline char *getOSProductNameOthers() {
 }
 #endif
 
-char *envuGetOSProductName() {
+char *envuGetOSProductName(void) {
 #ifdef __APPLE__
     return getOSProductNameApple();
 #elif defined(__linux__)

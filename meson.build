@@ -16,6 +16,7 @@ project('c-env-utils', ['c'],
 
 envu_link_args = []
 envu_c_args = []
+envu_c_only_args = []
 envu_OS = host_machine.system()
 envu_compiler = meson.get_compiler('c').get_id()
 envu_is_release = get_option('buildtype').startswith('release') or (get_option('buildtype').startswith('custom') and not get_option('debug'))
@@ -49,7 +50,12 @@ endif
 
 if envu_OS == 'freebsd'
     # Ignore some warnings on FreeBSD
-    envu_c_args += ['-Wno-strict-prototypes', '-Wno-c11-extensions']
+    envu_c_args += ['-Wno-c11-extensions']
+endif
+
+if envu_compiler != 'msvc'
+    # Show warnings for strict-prototypes
+    envu_c_only_args += ['-Wstrict-prototypes']
 endif
 
 # set source files
@@ -89,7 +95,7 @@ endif
 env_utils = library('env_utils',
     envu_sources,
     dependencies: envu_lib_deps,
-    c_args: envu_c_args,
+    c_args: envu_c_args + envu_c_only_args,
     cpp_args: envu_c_args,
     link_args: envu_link_args,
     install: true,
@@ -111,7 +117,7 @@ if get_option('cli')
     executable('env_utils_cli',
         envu_sources + ['src/env_utils_cli.c'],
         dependencies: env_utils_dep,
-        c_args: envu_c_args,
+        c_args: envu_c_args + envu_c_only_args,
         cpp_args: envu_c_args,
         install : false)
 endif

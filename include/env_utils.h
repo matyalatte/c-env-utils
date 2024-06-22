@@ -27,7 +27,7 @@ extern "C" {
  *
  * @returns A string that represents the version.
  */
-_ENVU_EXTERN const char* envuGetVersion();
+_ENVU_EXTERN const char* envuGetVersion(void);
 
 /**
  * Gets the version of c-env-utils as an integer.
@@ -36,7 +36,7 @@ _ENVU_EXTERN const char* envuGetVersion();
  *
  * @returns An integer that represents the version.
  */
-_ENVU_EXTERN int envuGetVersionAsInt();
+_ENVU_EXTERN int envuGetVersionAsInt(void);
 
 /**
  * Frees the memory of a string allocated by c-env-utils.
@@ -52,7 +52,7 @@ _ENVU_EXTERN void envuFree(void *p);
  *
  * @returns A string that represents the path to the executing binary. Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetExecutablePath();
+_ENVU_EXTERN char *envuGetExecutablePath(void);
 
 /**
  * Returns if the specified path is a regular file for not.
@@ -111,7 +111,7 @@ _ENVU_EXTERN char *envuGetDirectory(const char *path);
  *
  * @returns A string that represents the directory of the executing binary. Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetExecutableDir();
+_ENVU_EXTERN char *envuGetExecutableDir(void);
 
 /**
  * Gets the current working directory.
@@ -120,7 +120,7 @@ _ENVU_EXTERN char *envuGetExecutableDir();
  *
  * @returns A string that represents the current working directory. Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetCwd();
+_ENVU_EXTERN char *envuGetCwd(void);
 
 /**
  * Sets the current working directory.
@@ -158,7 +158,7 @@ _ENVU_EXTERN int envuSetEnv(const char *name, const char *value);
  *
  * @returns A string that represents user's home directory. Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetHome();
+_ENVU_EXTERN char *envuGetHome(void);
 
 /**
  * Gets user name.
@@ -167,7 +167,7 @@ _ENVU_EXTERN char *envuGetHome();
  *
  * @returns A string that represents user name. Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetUsername();
+_ENVU_EXTERN char *envuGetUsername(void);
 
 /**
  * Gets the name of running OS.
@@ -179,7 +179,7 @@ _ENVU_EXTERN char *envuGetUsername();
  * @returns A string that represents running OS.
  *          Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetOS();
+_ENVU_EXTERN char *envuGetOS(void);
 
 /**
  * Gets the version of running OS.
@@ -190,7 +190,7 @@ _ENVU_EXTERN char *envuGetOS();
  * @returns A string that represents the version of running OS.
  *          Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetOSVersion();
+_ENVU_EXTERN char *envuGetOSVersion(void);
 
 /**
  * Gets the product name and its version of running OS.
@@ -206,7 +206,7 @@ _ENVU_EXTERN char *envuGetOSVersion();
  * @returns A string that represents the product name and its version of running OS.
  *          Or a null pointer if failed.
  */
-_ENVU_EXTERN char *envuGetOSProductName();
+_ENVU_EXTERN char *envuGetOSProductName(void);
 
 /**
  * Gets the environment paths from the PATH variable.

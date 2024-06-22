@@ -105,7 +105,7 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
     return str;
 }
 
-char *envuGetExecutablePath() {
+char *envuGetExecutablePath(void) {
     wchar_t *wpath = NULL;
     int max_size = 256;
     int size;
@@ -246,7 +246,7 @@ char *envuGetDirectory(const char *path) {
     return str;
 }
 
-char *envuGetCwd() {
+char *envuGetCwd(void) {
     wchar_t *cwd = _wgetcwd(NULL, 0);
     if (cwd == NULL)
         return NULL;
@@ -300,7 +300,7 @@ int envuSetEnv(const char *name, const char *value) {
     return -(ret != 0);
 }
 
-char *envuGetHome() {
+char *envuGetHome(void) {
     // Check USERPROFILE
     char *userprof = envuGetEnv("USERPROFILE");
     if (userprof != NULL)
@@ -324,7 +324,7 @@ char *envuGetHome() {
     return str;
 }
 
-char *envuGetUsername() {
+char *envuGetUsername(void) {
     // Try GetUserNameW
     wchar_t wname[UNLEN + 1];
     wname[UNLEN] = 0;
@@ -342,16 +342,16 @@ char *envuGetUsername() {
     return NULL;
 }
 
-char *envuGetOS() {
+char *envuGetOS(void) {
     return envuAllocStrWithConst("Windows");
 }
 
-char *envuGetOSVersion() {
+char *envuGetOSVersion(void) {
     wchar_t *wstr = getOSInfoFromWMI(L"Version");
     return envuUTF16toUTF8(wstr);
 }
 
-char *envuGetOSProductName() {
+char *envuGetOSProductName(void) {
     wchar_t *wstr = getOSInfoFromWMI(L"Caption");
     return envuUTF16toUTF8(wstr);
 }
