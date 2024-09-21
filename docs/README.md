@@ -68,7 +68,7 @@ int main(void) {
 
 ### Requirements
 
-- [Meson](https://mesonbuild.com/) (0.54.0 or later) for building
+- [Meson](https://mesonbuild.com/) (0.58.0 or later) for building
 
 ### Build Whole Project
 

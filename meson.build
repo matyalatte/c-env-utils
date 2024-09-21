@@ -1,5 +1,5 @@
 project('c-env-utils', ['c'],
-    meson_version: '>=0.54.0',
+    meson_version: '>=0.58.0',
     default_options: [
         'buildtype=debug',              # build debug by default
         'default_library=shared',       # build shared libraries by default
