@@ -107,7 +107,7 @@ if meson.version().version_compare('>=1.3.0')
 else
     # TODO: Remove this else block to support only meson 1.3.0 or later.
     if get_option('default_library') == 'both'
-        error('c-env-utils requres meson 1.3.0 or later to build both shared and static libraries at the same time')
+        error('c-env-utils requires meson 1.3.0 or later to build both shared and static libraries at the same time')
     elif get_option('default_library') == 'static'
         envu_c_args += ['-D_ENVU_STATIC']
     endif
