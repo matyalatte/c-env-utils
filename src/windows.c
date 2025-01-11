@@ -94,12 +94,14 @@ char *envuUTF16toUTF8(const wchar_t* wstr) {
 
     char *str;
     int wstr_len = SIZET_TO_INT(wcslen(wstr));
-    int str_len = WideCharToMultiByte(ENVU_CP_UTF8, 0, wstr, wstr_len + 1, NULL, 0, NULL, NULL);
+    int str_len = WideCharToMultiByte(ENVU_CP_UTF8, WC_NO_BEST_FIT_CHARS,
+                                      wstr, wstr_len + 1, NULL, 0, NULL, NULL);
     if (str_len == 0)
         return envuAllocEmptyStr();
 
     str = envuAllocStr(str_len);
-    int res = WideCharToMultiByte(ENVU_CP_UTF8, 0, wstr, wstr_len + 1, str, str_len, NULL, NULL);
+    int res = WideCharToMultiByte(ENVU_CP_UTF8, WC_NO_BEST_FIT_CHARS,
+                                  wstr, wstr_len + 1, str, str_len, NULL, NULL);
     if (res != str_len)
         *str = '\0';
     return str;
