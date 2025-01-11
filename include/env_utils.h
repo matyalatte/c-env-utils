@@ -7,13 +7,18 @@
 extern "C" {
 #endif
 
+// Export APIs when shared build
 #ifndef _ENVU_EXTERN
+#ifdef _ENVU_STATIC
+#define _ENVU_EXTERN extern
+#else  // _ENVU_STATIC
 #ifdef _WIN32
 #define _ENVU_EXTERN __declspec(dllexport) extern
-#else
+#else  // _WIN32
 #define _ENVU_EXTERN __attribute__((visibility("default"))) extern
-#endif
-#endif
+#endif  // _WIN32
+#endif  // _ENVU_STATIC
+#endif  // _ENVU_EXTERN
 
 #define _ENVU_ENUM(s) typedef unsigned int s; enum
 

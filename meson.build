@@ -92,15 +92,37 @@ elif envu_OS == 'haiku'
 endif
 
 # main binary
-env_utils = library('env_utils',
-    envu_sources,
-    dependencies: envu_lib_deps,
-    c_args: envu_c_args + envu_c_only_args,
-    cpp_args: envu_c_args,
-    link_args: envu_link_args,
-    install: true,
-    include_directories: include_directories('./include'),
-    gnu_symbol_visibility: 'hidden')
+if meson.version().version_compare('>=1.3.0')
+    env_utils = library('env_utils',
+        envu_sources,
+        dependencies: envu_lib_deps,
+        c_args: envu_c_args + envu_c_only_args,
+        c_static_args: ['-D_ENVU_STATIC'],
+        cpp_args: envu_c_args,
+        cpp_static_args: ['-D_ENVU_STATIC'],
+        link_args: envu_link_args,
+        install: true,
+        include_directories: include_directories('./include'),
+        gnu_symbol_visibility: 'hidden')
+else
+    # TODO: Remove this else block to support only meson 1.3.0 or later.
+    if get_option('default_library') == 'both'
+        error('c-env-utils requires meson 1.3.0 or later to build both shared and static libraries at the same time')
+    elif get_option('default_library') == 'static'
+        envu_c_args += ['-D_ENVU_STATIC']
+    endif
+    env_utils = library('env_utils',
+        envu_sources,
+        dependencies: envu_lib_deps,
+        c_args: envu_c_args + envu_c_only_args,
+        cpp_args: envu_c_args,
+        link_args: envu_link_args,
+        install: true,
+        include_directories: include_directories('./include'),
+        gnu_symbol_visibility: 'hidden')
+endif
+
+
 install_headers('include/env_utils.h')
 if envu_OS == 'windows'
     install_headers('include/env_utils_windows.h')
