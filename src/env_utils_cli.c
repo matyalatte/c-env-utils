@@ -30,7 +30,16 @@ void PrintUTF8(const char* fmt, ...) {
 #define PRINTF(fmt, ...) printf(fmt, __VA_ARGS__)
 #endif  // _WIN32
 
+#ifdef _WIN32
+#include <locale.h>
+#endif
+
 int main(void) {
+#ifdef _WIN32
+    // Need this line to show unicode characters on Windows
+    setlocale(LC_CTYPE, "");
+#endif
+
     PRINTF("c-env-utils v%s\n", envuGetVersion());
     PRINTF("%s", "\n");
 
