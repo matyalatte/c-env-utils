@@ -23,6 +23,7 @@ c-env-utils supports most of the desktop operating systems.
 - BSD
 - Haiku
 - Solaris
+- SerenityOS
 - Other unix variants (maybe)
 
 ## Example

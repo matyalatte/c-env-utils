@@ -15,6 +15,7 @@ Examples of return values for envuGetOS(), envuGetOSVersion(), and envuGetOSProd
 | OpenBSD | 7.4 | OpenBSD 7.4 |
 | SunOS | 5.11 | OpenIndiana Hipster 2024.04 |
 | Haiku | 1 | Haiku R1/beta4 |
+| SerenityOS | 1.0 | SerenityOS |
 
 ## envuGetFullPath
 
