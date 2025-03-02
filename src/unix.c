@@ -655,6 +655,8 @@ char *envuGetOSProductName(void) {
     return getOSProductNameLinux();
 #elif defined(__sun)
     return getOSProductNameSolaris();
+#elif defined(__serenity__)
+    return envuGetOS();  // Note: SerenityOS has no versions.
 #else
     return getOSProductNameOthers();
 #endif

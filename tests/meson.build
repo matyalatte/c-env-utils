@@ -52,6 +52,8 @@ else
         # get os name from /etc/release
         r = run_command('head', '-1', '/etc/release', check: true)
         true_os_product_name = r.stdout().split('(')[0].strip()
+    elif envu_OS == 'serenityos'
+        true_os_product_name = true_os
     else
         true_os_product_name = true_os + ' ' + true_os_version
     endif
@@ -88,17 +90,22 @@ if envu_OS != 'windows'
 endif
 
 test_cpp_args = []
+test_link_args = []
 if envu_OS == 'windows'
     if envu_compiler == 'msvc'
         test_cpp_args += ['/source-charset:utf-8']
     elif envu_compiler == 'gcc'
         test_cpp_args += ['-finput-charset=UTF-8']
     endif
+elif envu_OS == 'serenityos' and envu_compiler == 'gcc'
+    # SerenityOS seems to require this flag for GCC
+    test_link_args += ['-lgcc_s']
 endif
 
 test_exe = executable('env_utils_test',
     'main.cpp',
     cpp_args: test_cpp_args,
+    link_args: test_link_args,
     dependencies : [env_utils_dep, gtest_dep, gmock_dep],
     install : false)
 
