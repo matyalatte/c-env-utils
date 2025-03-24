@@ -1,16 +1,11 @@
 project('c-env-utils', ['c'],
     meson_version: '>=0.58.0',
     default_options: [
-        'buildtype=debug',              # build debug by default
-        'default_library=shared',       # build shared libraries by default
-        'warning_level=3',              # always max warnings
-        'b_pch=false',                  # we don't want precompiled headers
-        'b_staticpic=true',             # use PIC even for static libraries
-        'c_std=c99',                    # strict C99
-        'c_winlibs=',                   # we define our own Windows libraries
-        'cpp_std=c++11',                # strict C++11
-        'cpp_eh=sc',                    # shut the compiler up in some cases
-        'cpp_winlibs=',                 # likewise as with c_winlibs
+        'warning_level=3',
+        'c_std=c99',
+        'c_winlibs=',
+        'cpp_std=c++11',
+        'cpp_winlibs=',
     ],
     version: '0.3.1')
 
