@@ -13,6 +13,7 @@ Examples of return values for envuGetOS(), envuGetOSVersion(), and envuGetOSProd
 | FreeBSD | 14.0 | FreeBSD 14.0 |
 | NetBSD | 9.3 | NetBSD 9.3 |
 | OpenBSD | 7.4 | OpenBSD 7.4 |
+| DragonFly BSD | 6.4.2 | DragonFly 6.4 |
 | SunOS | 5.11 | OpenIndiana Hipster 2024.04 |
 | Haiku | 1 | Haiku R1/beta4 |
 | SerenityOS | 1.0 | SerenityOS |
